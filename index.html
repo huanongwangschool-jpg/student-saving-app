@@ -418,8 +418,12 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
         </select>
       </div>
       <div class="form-group" id="exportDateGroup">
-        <label>เดือน-ปี (สำหรับรายวัน)</label>
+        <label>เดือน-ปี</label>
         <input type="month" id="exportMonth">
+      </div>
+      <div class="form-group" id="exportExactDateGroup">
+        <label>วันที่ (ถ้าต้องการเฉพาะวัน)</label>
+        <input type="date" id="exportExactDate">
       </div>
       <div class="form-group" id="exportYearGroup" style="display:none">
         <label>ปี พ.ศ.</label>
@@ -696,6 +700,7 @@ function onExportTypeChange(){
   var usesMonth = t==="daily" || t==="studentDaily";
   var usesYear = t==="monthly" || t==="studentMonthly";
   document.getElementById("exportDateGroup").style.display=usesMonth?"":"none";
+  document.getElementById("exportExactDateGroup").style.display=usesMonth?"":"none";
   document.getElementById("exportYearGroup").style.display=usesYear?"":"none";
 }
 
@@ -1007,6 +1012,7 @@ function buildExportData(){
   var cls   = document.getElementById("exportClass").value;
   var type  = document.getElementById("exportType").value;
   var month = document.getElementById("exportMonth").value;
+  var exactDate = document.getElementById("exportExactDate").value;
   var year  = Number(document.getElementById("exportYear").value)||0;
 
   // กรองนักเรียนตามชั้น
@@ -1031,13 +1037,18 @@ function buildExportData(){
     var notes=list.map(function(t){return String(t.note||"").trim();}).filter(function(v){return !!v;});
     return notes.length?notes.join(" | "):"-";
   };
-
+  var isSameDay = function(t,dateValue){
+    return String(t.date).slice(0,10)===dateValue;
+  };
+  var isSameMonth = function(t,monthValue){
+    var d=new Date(t.date),k=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+    return k===monthValue;
+  };
   if(type==="daily"){
-    // รายวันในเดือนที่เลือก
-    if(!month){showToast("กรุณาเลือกเดือน","error");return null;}
+    // รายวันในวันที่หรือเดือนที่เลือก
+    if(!exactDate&&!month){showToast("กรุณาเลือกวันที่หรือเดือน","error");return null;}
     var txMonth = txFiltered.filter(function(t){
-      var d=new Date(t.date),k=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
-      return k===month;
+      return exactDate?isSameDay(t,exactDate):isSameMonth(t,month);
     });
     // group by date
     var dayMap={};
@@ -1056,15 +1067,18 @@ function buildExportData(){
     var totalDep=txMonth.filter(function(t){return t.type==="DEPOSIT";}).reduce(function(a,t){return a+t.amount;},0);
     var totalWdr=txMonth.filter(function(t){return t.type==="WITHDRAW";}).reduce(function(a,t){return a+t.amount;},0);
     var p=month.split("-");
-    var mLabel=new Date(p[0],p[1]-1).toLocaleDateString("th-TH",{year:"numeric",month:"long"});
+    var mLabel=exactDate?fmtDate(exactDate):new Date(p[0],p[1]-1).toLocaleDateString("th-TH",{year:"numeric",month:"long"});
+    var filePeriod=exactDate||month;
     return {
       title: "สรุปการออมรายวัน — "+clsLabel,
       subtitle: schoolName+" | "+mLabel,
       heads: ["วันที่","จำนวนรายการ","ยอดฝาก (บาท)","ยอดถอน (บาท)","ยอดสุทธิ (บาท)"],
       rows: rows,
-      summary: "รวมทั้งเดือน: ฝาก ฿"+fmt(totalDep)+" | ถอน ฿"+fmt(totalWdr)+" | สุทธิ ฿"+fmt(totalDep-totalWdr),
+      summary: (exactDate?"รวมวันที่เลือก":"รวมทั้งเดือน")+": ฝาก ฿"+fmt(totalDep)+" | ถอน ฿"+fmt(totalWdr)+" | สุทธิ ฿"+fmt(totalDep-totalWdr),
       moneyColumns: [2,3,4],
-      filename: "สรุปรายวัน_"+clsLabel+"_"+month
+      withdrawColumns: [3],
+      balanceColumns: [4],
+      filename: "สรุปรายวัน_"+clsLabel+"_"+filePeriod
     };
   }
 
@@ -1099,6 +1113,8 @@ function buildExportData(){
       rows: mrows,
       summary: "รวมทั้งหมด: ฝาก ฿"+fmt(tDep)+" | ถอน ฿"+fmt(tWdr)+" | สุทธิ ฿"+fmt(tDep-tWdr),
       moneyColumns: [2,3,4],
+      withdrawColumns: [3],
+      balanceColumns: [4],
       filename: "สรุปรายเดือน_"+clsLabel+(year?"_"+year:"")
     };
   }
@@ -1119,15 +1135,16 @@ function buildExportData(){
       rows: stuRows,
       summary: "รวม "+students.length+" คน | ฝาก ฿"+fmt(tDep2)+" | ถอน ฿"+fmt(tWdr2)+" | สุทธิ ฿"+fmt(tDep2-tWdr2),
       moneyColumns: [3,4,5],
+      withdrawColumns: [4],
+      balanceColumns: [5],
       filename: "สรุปรายบุคคล_"+clsLabel
     };
   }
 
   if(type==="studentDaily"){
-    if(!month){showToast("กรุณาเลือกเดือน","error");return null;}
+    if(!exactDate&&!month){showToast("กรุณาเลือกวันที่หรือเดือน","error");return null;}
     var txMonthDetail=txFiltered.filter(function(t){
-      var d=new Date(t.date),k=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
-      return k===month;
+      return exactDate?isSameDay(t,exactDate):isSameMonth(t,month);
     });
     var dailyMap={};
     txMonthDetail.forEach(function(t){
@@ -1148,7 +1165,8 @@ function buildExportData(){
     var depTotal=txMonthDetail.filter(function(t){return t.type==="DEPOSIT";}).reduce(function(a,t){return a+(Number(t.amount)||0);},0);
     var wdrTotal=txMonthDetail.filter(function(t){return t.type==="WITHDRAW";}).reduce(function(a,t){return a+(Number(t.amount)||0);},0);
     var p3=month.split("-");
-    var monthLabel=new Date(p3[0],p3[1]-1).toLocaleDateString("th-TH",{year:"numeric",month:"long"});
+    var monthLabel=exactDate?fmtDate(exactDate):new Date(p3[0],p3[1]-1).toLocaleDateString("th-TH",{year:"numeric",month:"long"});
+    var detailPeriod=exactDate||month;
     return {
       title: "รายละเอียดการฝาก-ถอนเงินรายบุคคลรายวัน — "+clsLabel,
       subtitle: schoolName+" | "+monthLabel,
@@ -1156,7 +1174,9 @@ function buildExportData(){
       rows: dailyRows,
       summary: "รวม "+dailyRows.length+" แถว | "+txMonthDetail.length+" รายการ | ฝาก ฿"+fmt(depTotal)+" | ถอน ฿"+fmt(wdrTotal)+" | คงเหลือ ฿"+fmt(depTotal-wdrTotal),
       moneyColumns: [5,6,7],
-      filename: "รายละเอียดฝากถอนรายบุคคลรายวัน_"+clsLabel+"_"+month
+      withdrawColumns: [6],
+      balanceColumns: [7],
+      filename: "รายละเอียดฝากถอนรายบุคคลรายวัน_"+clsLabel+"_"+detailPeriod
     };
   }
 
@@ -1195,10 +1215,22 @@ function buildExportData(){
       rows: monthlyRows,
       summary: "รวม "+monthlyRows.length+" แถว | "+txYearDetail.length+" รายการ | ฝาก ฿"+fmt(depYearTotal)+" | ถอน ฿"+fmt(wdrYearTotal)+" | คงเหลือ ฿"+fmt(depYearTotal-wdrYearTotal),
       moneyColumns: [5,6,7],
+      withdrawColumns: [6],
+      balanceColumns: [7],
       filename: "รายละเอียดฝากถอนรายบุคคลรายเดือน_"+clsLabel+(year?"_"+year:"")
     };
   }
   return null;
+}
+
+function getExportMoneyClass(data,index){
+  if(data.withdrawColumns&&data.withdrawColumns.indexOf(index)>=0) return "money-neg";
+  return "money";
+}
+function getExportMoneyColor(data,index){
+  if(data.withdrawColumns&&data.withdrawColumns.indexOf(index)>=0) return "#dc2626";
+  if(data.balanceColumns&&data.balanceColumns.indexOf(index)>=0) return "#0f766e";
+  return "#16a34a";
 }
 
 function previewExport(){
@@ -1212,7 +1244,7 @@ function previewExport(){
   else data.rows.forEach(function(r){
     bodyHtml+='<tr>'+r.map(function(v,i){
       var isAmt=data.moneyColumns&&data.moneyColumns.indexOf(i)>=0&&typeof v==="number";
-      return '<td>'+(isAmt?'<span class="money">฿'+fmt(v)+'</span>':v)+'</td>';
+      return '<td>'+(isAmt?'<span class="'+getExportMoneyClass(data,i)+'">฿'+fmt(v)+'</span>':v)+'</td>';
     }).join("")+'</tr>';
   });
   document.getElementById("exportPreviewBody").innerHTML=bodyHtml;
@@ -1272,7 +1304,9 @@ function doExportPDF(){
         var text=isAmt?"฿"+fmt(v):v;
         var bg=idx%2?'#fff':'#f0f9ff';
         var align=isAmt?'right':'left';
-        return '<td style="background:'+bg+';border:1px solid #dbeafe;padding:7px;text-align:'+align+'">'+escapeHtml(text)+'</td>';
+        var color=isAmt?getExportMoneyColor(d,i):'#0f172a';
+        var weight=isAmt?'700':'400';
+        return '<td style="background:'+bg+';border:1px solid #dbeafe;padding:7px;text-align:'+align+';color:'+color+';font-weight:'+weight+'">'+escapeHtml(text)+'</td>';
       }).join("")+'</tr>';
     }).join(""):'<tr><td colspan="'+d.heads.length+'" style="border:1px solid #dbeafe;padding:18px;text-align:center;color:#94a3b8">ไม่มีข้อมูลในช่วงที่เลือก</td></tr>')
     +'</tbody></table>'
