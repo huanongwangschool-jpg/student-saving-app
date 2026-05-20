@@ -635,12 +635,42 @@ function loadAll() {
 // HELPERS
 // ══════════════════════════════════════════════════════════
 function fmt(n){ return Number(n||0).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function parseAppDate(value){
+  if(value instanceof Date&&!isNaN(value)) return new Date(value.getFullYear(),value.getMonth(),value.getDate());
+  var s=String(value||"").trim();
+  if(!s) return null;
+  var m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(m){
+    var y=Number(m[1]);
+    if(y>2400) y-=543;
+    return new Date(y,Number(m[2])-1,Number(m[3]));
+  }
+  m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if(m){
+    var y2=Number(m[3]);
+    if(y2<100) y2+=2000;
+    if(y2>2400) y2-=543;
+    return new Date(y2,Number(m[2])-1,Number(m[1]));
+  }
+  var dt=new Date(s);
+  return isNaN(dt)?null:new Date(dt.getFullYear(),dt.getMonth(),dt.getDate());
+}
+function dateKey(value){
+  var dt=parseAppDate(value);
+  if(!dt) return String(value||"").slice(0,10);
+  return dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0");
+}
+function monthKey(value){
+  var dt=parseAppDate(value);
+  if(!dt) return String(value||"").slice(0,7);
+  return dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0");
+}
 function fmtDate(d){
-  try{ var dt=new Date(d); return isNaN(dt)?String(d):dt.toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}); }
+  try{ var dt=parseAppDate(d); return !dt?String(d):dt.toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}); }
   catch(e){ return String(d); }
 }
 function fmtDateTime(d){
-  try{ var dt=new Date(d); return isNaN(dt)?String(d):dt.toLocaleString('th-TH',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); }
+  try{ var dt=new Date(d); return isNaN(dt)?fmtDate(d):dt.toLocaleString('th-TH',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); }
   catch(e){ return String(d); }
 }
 function getStudentById(id){ for(var i=0;i<appStudents.length;i++){if(appStudents[i].id===id)return appStudents[i];} return {name:"ไม่พบ",className:""}; }
@@ -1038,11 +1068,10 @@ function buildExportData(){
     return notes.length?notes.join(" | "):"-";
   };
   var isSameDay = function(t,dateValue){
-    return String(t.date).slice(0,10)===dateValue;
+    return dateKey(t.date)===dateValue;
   };
   var isSameMonth = function(t,monthValue){
-    var d=new Date(t.date),k=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
-    return k===monthValue;
+    return monthKey(t.date)===monthValue;
   };
   if(type==="daily"){
     // รายวันในวันที่หรือเดือนที่เลือก
@@ -1053,7 +1082,7 @@ function buildExportData(){
     // group by date
     var dayMap={};
     txMonth.forEach(function(t){
-      var d=String(t.date).slice(0,10);
+      var d=dateKey(t.date);
       if(!dayMap[d])dayMap[d]={dep:0,wdr:0,cnt:0};
       if(t.type==="DEPOSIT")dayMap[d].dep+=t.amount;
       else dayMap[d].wdr+=t.amount;
@@ -1086,13 +1115,14 @@ function buildExportData(){
     // รายเดือนทั้งหมด (ถ้าระบุปี กรองด้วย)
     var txYear = year
       ? txFiltered.filter(function(t){
-          var d=new Date(t.date);
+          var d=parseAppDate(t.date);
+          if(!d) return false;
           return (d.getFullYear()+543)===year || d.getFullYear()===(year-543);
         })
       : txFiltered;
     var monMap={};
     txYear.forEach(function(t){
-      var d=new Date(t.date),k=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+      var k=monthKey(t.date);
       if(!monMap[k])monMap[k]={dep:0,wdr:0,cnt:0};
       if(t.type==="DEPOSIT")monMap[k].dep+=t.amount;
       else monMap[k].wdr+=t.amount;
@@ -1148,8 +1178,9 @@ function buildExportData(){
     });
     var dailyMap={};
     txMonthDetail.forEach(function(t){
-      var key=String(t.date).slice(0,10)+"|"+t.studentId;
-      if(!dailyMap[key]) dailyMap[key]={date:String(t.date).slice(0,10),studentId:t.studentId,dep:0,wdr:0,count:0,items:[]};
+      var dKey=dateKey(t.date);
+      var key=dKey+"|"+t.studentId;
+      if(!dailyMap[key]) dailyMap[key]={date:dKey,studentId:t.studentId,dep:0,wdr:0,count:0,items:[]};
       if(t.type==="DEPOSIT") dailyMap[key].dep+=Number(t.amount)||0;
       else dailyMap[key].wdr+=Number(t.amount)||0;
       dailyMap[key].count++;
@@ -1183,20 +1214,21 @@ function buildExportData(){
   if(type==="studentMonthly"){
     var txYearDetail = year
       ? txFiltered.filter(function(t){
-          var d=new Date(t.date);
+          var d=parseAppDate(t.date);
+          if(!d) return false;
           return (d.getFullYear()+543)===year || d.getFullYear()===(year-543);
         })
       : txFiltered;
     var monthlyMap={};
     txYearDetail.forEach(function(t){
-      var d=new Date(t.date),mk=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+      var mk=monthKey(t.date);
       var key=mk+"|"+t.studentId;
       if(!monthlyMap[key]) monthlyMap[key]={month:mk,studentId:t.studentId,dep:0,wdr:0,count:0,lastDate:"",items:[]};
       if(t.type==="DEPOSIT") monthlyMap[key].dep+=Number(t.amount)||0;
       else monthlyMap[key].wdr+=Number(t.amount)||0;
       monthlyMap[key].count++;
       monthlyMap[key].items.push(t);
-      if(!monthlyMap[key].lastDate || new Date(t.date)>new Date(monthlyMap[key].lastDate)) monthlyMap[key].lastDate=t.date;
+      if(!monthlyMap[key].lastDate || parseAppDate(t.date)>parseAppDate(monthlyMap[key].lastDate)) monthlyMap[key].lastDate=t.date;
     });
     var monthlyRows=Object.keys(monthlyMap).sort(function(ka,kb){
       var a=monthlyMap[ka],b=monthlyMap[kb],sa=findStudent(a.studentId),sb=findStudent(b.studentId);
