@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ระบบออมทรัพย์นักเรียน</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Prompt:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<!-- jsPDF + AutoTable สำหรับ PDF export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<!-- SheetJS สำหรับ Excel export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --sky:#0ea5e9;--sky-d:#0284c7;--sky-l:#e0f2fe;
+  --green:#22c55e;--green-d:#16a34a;--green-l:#dcfce7;
+  --yellow:#fbbf24;--yellow-l:#fef9c3;
+  --red:#ef4444;--red-l:#fee2e2;
+  --orange:#f97316;--orange-l:#ffedd5;
+  --purple:#a855f7;--purple-l:#f3e8ff;
+  --teal:#14b8a6;--teal-l:#ccfbf1;
+  --amber:#f59e0b;--amber-l:#fef3c7;
+  --bg:#f0f9ff;--card:#fff;
+  --text:#0f172a;--text-m:#475569;--text-s:#94a3b8;
+  --border:#e2e8f0;--radius:16px;
+  --shadow:0 4px 24px rgba(14,165,233,.10);
+  --shadow-lg:0 8px 40px rgba(14,165,233,.15);
+}
+html{scroll-behavior:smooth}
+body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--sky-l)}
+::-webkit-scrollbar-thumb{background:var(--sky);border-radius:99px}
+
+/* ── Header ── */
+.header{background:linear-gradient(135deg,#0ea5e9 0%,#22c55e 100%);color:#fff;padding:0 24px;position:sticky;top:0;z-index:100;box-shadow:0 2px 16px rgba(14,165,233,.3)}
+.header-inner{max-width:1340px;margin:0 auto;display:flex;align-items:center;gap:14px;height:64px}
+.logo{font-family:'Prompt',sans-serif;font-size:17px;font-weight:800;line-height:1.2;flex:1}
+.logo span{font-size:11px;font-weight:400;opacity:.85;display:block}
+
+/* ── Nav ── */
+.nav-wrap{background:#fff;border-bottom:2px solid var(--border);position:sticky;top:64px;z-index:99;overflow-x:auto}
+.nav-inner{max-width:1340px;margin:0 auto;display:flex;padding:0 10px;gap:1px}
+.nav-btn{background:none;border:none;cursor:pointer;padding:12px 14px;font-family:'Sarabun',sans-serif;font-size:12.5px;font-weight:600;color:var(--text-m);white-space:nowrap;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s;display:flex;align-items:center;gap:6px}
+.nav-btn:hover{color:var(--sky);background:var(--sky-l);border-radius:8px 8px 0 0}
+.nav-btn.active{color:var(--sky-d);border-bottom-color:var(--sky-d)}
+.nav-btn i{font-size:14px}
+
+/* ── Main ── */
+.main{max-width:1340px;margin:0 auto;padding:22px 14px 80px}
+.page{display:none}.page.active{display:block}
+
+/* ── Card ── */
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;border:1px solid var(--border);margin-bottom:16px}
+.card:last-child{margin-bottom:0}
+.card-title{font-family:'Prompt',sans-serif;font-weight:700;font-size:15px;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card-title i{color:var(--sky)}
+
+/* ── Stat Cards ── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:12px;margin-bottom:18px}
+.stat-card{background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);border:1px solid var(--border);display:flex;align-items:center;gap:12px;transition:transform .2s,box-shadow .2s}
+.stat-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+.stat-icon{width:48px;height:48px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.stat-icon.sky{background:var(--sky-l);color:var(--sky-d)}
+.stat-icon.green{background:var(--green-l);color:var(--green-d)}
+.stat-icon.red{background:var(--red-l);color:var(--red)}
+.stat-icon.teal{background:var(--teal-l);color:#0f766e}
+.stat-icon.orange{background:var(--orange-l);color:#c2410c}
+.stat-icon.amber{background:var(--amber-l);color:#b45309}
+.stat-icon.purple{background:var(--purple-l);color:#7c3aed}
+.stat-label{font-size:11.5px;color:var(--text-s);font-weight:500}
+.stat-value{font-family:'Prompt',sans-serif;font-size:19px;font-weight:800;color:var(--text);line-height:1.2}
+.stat-sub{font-size:11px;color:var(--text-s)}
+
+/* ── Grid ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:900px){.grid-2{grid-template-columns:1fr}}
+
+/* ── Table ── */
+.table-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+thead tr{background:linear-gradient(90deg,var(--sky-l),var(--green-l))}
+th{padding:10px 12px;text-align:left;font-weight:700;color:var(--text);white-space:nowrap;font-size:12.5px}
+td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tbody tr:hover{background:#f8fafc}
+.no-data{text-align:center;color:var(--text-s);padding:32px!important}
+
+/* ── Badges ── */
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:99px;font-size:11.5px;font-weight:600}
+.badge-sky{background:var(--sky-l);color:var(--sky-d)}
+.badge-green{background:var(--green-l);color:var(--green-d)}
+.badge-yellow{background:var(--yellow-l);color:#92400e}
+.badge-red{background:var(--red-l);color:var(--red)}
+.badge-orange{background:var(--orange-l);color:#c2410c}
+.badge-teal{background:var(--teal-l);color:#0f766e}
+.badge-gray{background:#f1f5f9;color:var(--text-m)}
+.badge-amber{background:var(--amber-l);color:#b45309}
+.badge-purple{background:var(--purple-l);color:#7c3aed}
+
+/* ── Transaction type ── */
+.tx-deposit{background:var(--green-l);color:var(--green-d);padding:3px 9px;border-radius:8px;font-size:11.5px;font-weight:700;display:inline-flex;align-items:center;gap:3px}
+.tx-withdraw{background:var(--red-l);color:var(--red);padding:3px 9px;border-radius:8px;font-size:11.5px;font-weight:700;display:inline-flex;align-items:center;gap:3px}
+
+/* ── Form ── */
+.form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:10px;margin-bottom:10px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+label{font-size:12.5px;font-weight:600;color:var(--text-m)}
+input,select,textarea{border:1.5px solid var(--border);border-radius:9px;padding:8px 11px;font-family:'Sarabun',sans-serif;font-size:13.5px;background:#fff;color:var(--text);transition:border .2s,box-shadow .2s;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--sky);box-shadow:0 0 0 3px rgba(14,165,233,.13)}
+textarea{resize:vertical;min-height:64px}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 15px;border-radius:9px;font-family:'Sarabun',sans-serif;font-size:13.5px;font-weight:600;cursor:pointer;border:none;transition:all .2s;white-space:nowrap}
+.btn-primary{background:linear-gradient(135deg,var(--sky),#38bdf8);color:#fff;box-shadow:0 3px 10px rgba(14,165,233,.26)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 5px 16px rgba(14,165,233,.36)}
+.btn-green{background:linear-gradient(135deg,var(--green),#4ade80);color:#fff;box-shadow:0 3px 10px rgba(34,197,94,.26)}
+.btn-green:hover{transform:translateY(-1px)}
+.btn-red{background:var(--red-l);color:var(--red);border:1.5px solid #fca5a5}
+.btn-red:hover{background:var(--red);color:#fff}
+.btn-orange{background:var(--orange-l);color:#c2410c;border:1.5px solid #fdba74}
+.btn-orange:hover{background:var(--orange);color:#fff}
+.btn-yellow{background:var(--yellow-l);color:#92400e;border:1.5px solid #fde68a}
+.btn-yellow:hover{background:var(--yellow);color:#fff}
+.btn-purple{background:var(--purple-l);color:#7c3aed;border:1.5px solid #d8b4fe}
+.btn-purple:hover{background:var(--purple);color:#fff}
+.btn-teal{background:var(--teal-l);color:#0f766e;border:1.5px solid #99f6e4}
+.btn-teal:hover{background:var(--teal);color:#fff}
+.btn-amber{background:var(--amber-l);color:#b45309;border:1.5px solid #fde68a}
+.btn-amber:hover{background:var(--amber);color:#fff}
+.btn-ghost{background:transparent;color:var(--text-m);border:1.5px solid var(--border)}
+.btn-ghost:hover{background:var(--sky-l);border-color:var(--sky);color:var(--sky-d)}
+.btn-sm{padding:4px 10px;font-size:12px;border-radius:7px}
+.action-row{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.search-wrap{position:relative;flex:1;min-width:140px}
+.search-wrap input{width:100%;padding-left:32px}
+.search-wrap i{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text-s);font-size:13px}
+
+/* ── Tabs ── */
+.tab-row{display:flex;gap:4px;margin-bottom:14px;border-bottom:2px solid var(--border)}
+.tab-inner{padding:8px 14px;border-radius:8px 8px 0 0;font-weight:600;font-size:12.5px;cursor:pointer;border:none;background:none;color:var(--text-m);display:flex;align-items:center;gap:5px;border-bottom:3px solid transparent;margin-bottom:-2px}
+.tab-inner.active{color:var(--sky-d);border-bottom-color:var(--sky-d);background:var(--sky-l)}
+.tab-content{display:none}.tab-content.active{display:block}
+
+/* ── Modal ── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:200;align-items:center;justify-content:center;padding:14px}
+.modal-bg.show{display:flex}
+.modal{background:#fff;border-radius:18px;box-shadow:0 24px 60px rgba(0,0,0,.18);width:100%;max-width:520px;max-height:92vh;overflow-y:auto;animation:popIn .22s cubic-bezier(.34,1.56,.64,1)}
+@keyframes popIn{from{opacity:0;transform:scale(.88)}to{opacity:1;transform:scale(1)}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);font-family:'Prompt',sans-serif;font-weight:700;font-size:15px}
+.modal-header i{color:var(--sky)}
+.modal-body{padding:20px}
+.modal-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.modal-close{background:none;border:none;cursor:pointer;font-size:17px;color:var(--text-s);padding:3px;border-radius:5px}
+.modal-close:hover{background:var(--red-l);color:var(--red)}
+
+/* ── Toast ── */
+#toast{position:fixed;bottom:22px;right:22px;z-index:9999;display:flex;flex-direction:column;gap:7px;pointer-events:none}
+.toast-item{background:#1e293b;color:#fff;padding:11px 16px;border-radius:11px;font-size:13.5px;display:flex;align-items:center;gap:9px;animation:slideUp .3s ease;box-shadow:0 8px 24px rgba(0,0,0,.2);max-width:320px}
+.toast-item.success{border-left:4px solid var(--green)}
+.toast-item.error{border-left:4px solid var(--red)}
+.toast-item.info{border-left:4px solid var(--sky)}
+@keyframes slideUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Loading ── */
+.loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.88);z-index:999;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+.loading-overlay.show{display:flex!important}
+.spinner{width:46px;height:46px;border:5px solid var(--sky-l);border-top-color:var(--sky);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Misc ── */
+.chart-wrap{position:relative;height:250px}
+.money{font-family:'Prompt',sans-serif;font-weight:700;color:var(--green-d)}
+.money-neg{font-family:'Prompt',sans-serif;font-weight:700;color:var(--red)}
+.sec-title{font-family:'Prompt',sans-serif;font-weight:800;font-size:19px;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:9px}
+.sec-title i{color:var(--sky)}
+.filter-bar{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px;align-items:center}
+.filter-bar select,.filter-bar input{min-width:125px;flex:1}
+.class-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:9px;margin-bottom:18px}
+.class-badge{background:var(--sky-l);border-radius:11px;padding:12px 9px;text-align:center;cursor:pointer;transition:all .2s;border:2px solid transparent}
+.class-badge:hover,.class-badge.active{background:var(--sky);color:#fff;border-color:var(--sky-d);transform:scale(1.03)}
+.class-badge-name{font-family:'Prompt',sans-serif;font-weight:700;font-size:14px}
+.class-badge-total{font-size:11px;margin-top:2px;opacity:.8}
+.promo-list{max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:9px}
+.promo-row{display:flex;align-items:center;gap:9px;padding:9px 13px;border-bottom:1px solid var(--border);font-size:13.5px}
+.promo-row:last-child{border-bottom:none}
+.promo-row:hover{background:var(--sky-l)}
+.promo-row input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--sky)}
+.promo-row .promo-name{flex:1}
+.danger-box{background:var(--red-l);border:1.5px solid #fca5a5;border-radius:11px;padding:13px;margin-bottom:13px;font-size:13.5px;color:#991b1b;display:flex;gap:9px;align-items:flex-start}
+.info-box{background:var(--sky-l);border:1.5px solid #bae6fd;border-radius:11px;padding:13px;margin-bottom:13px;font-size:13.5px;color:#075985;display:flex;gap:9px;align-items:flex-start}
+.success-box{background:var(--green-l);border:1.5px solid #86efac;border-radius:11px;padding:13px;margin-bottom:13px;font-size:13.5px;color:#14532d;display:flex;gap:9px;align-items:flex-start}
+tr.row-transferred td{background:#fff7ed!important;color:var(--text-m)}
+tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
+
+/* ── Audit specific ── */
+.audit-action{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:8px;font-size:11.5px;font-weight:700}
+.audit-ADD_STUDENT{background:var(--green-l);color:var(--green-d)}
+.audit-EDIT_STUDENT{background:var(--sky-l);color:var(--sky-d)}
+.audit-TRANSFER_OUT{background:var(--orange-l);color:#c2410c}
+.audit-DELETE_STUDENT{background:var(--red-l);color:var(--red)}
+.audit-ADD_TX{background:var(--teal-l);color:#0f766e}
+.audit-DELETE_TX{background:var(--amber-l);color:#b45309}
+.audit-PROMOTE{background:var(--purple-l);color:#7c3aed}
+.audit-note{color:var(--red);font-size:11.5px;font-weight:600;display:flex;align-items:center;gap:3px}
+
+/* ── Export section ── */
+.export-panel{background:linear-gradient(135deg,#f0f9ff,#f0fdf4);border:1.5px solid var(--border);border-radius:14px;padding:18px;margin-bottom:14px}
+.export-panel-title{font-family:'Prompt',sans-serif;font-weight:700;font-size:14px;margin-bottom:12px;display:flex;align-items:center;gap:7px;color:var(--text)}
+.export-panel-title i{color:var(--sky)}
+.export-btn-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+
+@media(max-width:640px){.stats-grid{grid-template-columns:repeat(2,1fr)}.stat-value{font-size:16px}.logo{font-size:14px}}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div style="color:var(--sky-d);font-weight:600;font-size:14px" id="loadingMsg">กำลังโหลดข้อมูล...</div>
+</div>
+
+<header class="header">
+  <div class="header-inner">
+    <i class="fa-solid fa-piggy-bank" style="font-size:24px"></i>
+    <div class="logo">ระบบออมทรัพย์นักเรียน
+      <span>โรงเรียนบ้านหัวหนองแวง(สามัคคีราษฎร์บำรุง)</span>
+    </div>
+  </div>
+</header>
+
+<nav class="nav-wrap">
+  <div class="nav-inner">
+    <button class="nav-btn active" onclick="switchPage('dashboard',this)"><i class="fa-solid fa-gauge-high"></i>ภาพรวม</button>
+    <button class="nav-btn" onclick="switchPage('students',this)"><i class="fa-solid fa-users"></i>นักเรียน</button>
+    <button class="nav-btn" onclick="switchPage('transactions',this)"><i class="fa-solid fa-coins"></i>ฝาก-ถอน</button>
+    <button class="nav-btn" onclick="switchPage('byclass',this)"><i class="fa-solid fa-layer-group"></i>แยกชั้น</button>
+    <button class="nav-btn" onclick="switchPage('promote',this)"><i class="fa-solid fa-graduation-cap"></i>เลื่อนชั้น</button>
+    <button class="nav-btn" onclick="switchPage('export',this)"><i class="fa-solid fa-file-export"></i>Export</button>
+    <button class="nav-btn" onclick="switchPage('audit',this)"><i class="fa-solid fa-shield-halved"></i>ประวัติการแก้ไข</button>
+    <button class="nav-btn" onclick="switchPage('reports',this)"><i class="fa-solid fa-chart-line"></i>รายงาน</button>
+  </div>
+</nav>
+
+<main class="main">
+
+<!-- ══════════ DASHBOARD ══════════ -->
+<section class="page active" id="page-dashboard">
+  <div class="sec-title"><i class="fa-solid fa-gauge-high"></i>ภาพรวมระบบออมทรัพย์</div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-icon sky"><i class="fa-solid fa-sack-dollar"></i></div><div><div class="stat-label">ยอดออมสุทธิรวม</div><div class="stat-value money" id="grandTotal">-</div><div class="stat-sub">บาท</div></div></div>
+    <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-arrow-up"></i></div><div><div class="stat-label">ยอดฝากรวม</div><div class="stat-value" id="totalDeposit">-</div><div class="stat-sub">บาท</div></div></div>
+    <div class="stat-card"><div class="stat-icon red"><i class="fa-solid fa-arrow-down"></i></div><div><div class="stat-label">ยอดถอนรวม</div><div class="stat-value money-neg" id="totalWithdraw">-</div><div class="stat-sub">บาท</div></div></div>
+    <div class="stat-card"><div class="stat-icon teal"><i class="fa-solid fa-graduation-cap"></i></div><div><div class="stat-label">นักเรียน (active)</div><div class="stat-value" id="studentCount">-</div><div class="stat-sub">คน</div></div></div>
+  </div>
+  <div class="grid-2">
+    <div class="card"><div class="card-title"><i class="fa-solid fa-chart-bar"></i>ยอดออมสุทธิแยกชั้น</div><div class="chart-wrap"><canvas id="classChart"></canvas></div></div>
+    <div class="card"><div class="card-title"><i class="fa-solid fa-chart-line"></i>แนวโน้มฝากเงินรายเดือน</div><div class="chart-wrap"><canvas id="monthlyChart"></canvas></div></div>
+  </div>
+</section>
+
+<!-- ══════════ STUDENTS ══════════ -->
+<section class="page" id="page-students">
+  <div class="sec-title"><i class="fa-solid fa-users"></i>จัดการข้อมูลนักเรียน</div>
+  <div class="card">
+    <div class="card-title"><i class="fa-solid fa-user-plus"></i>เพิ่มนักเรียนใหม่</div>
+    <div class="form-row">
+      <div class="form-group"><label>ชื่อ-นามสกุล</label><input type="text" id="newStudentName" placeholder="เช่น เด็กหญิงสมใจ ใจดี"></div>
+      <div class="form-group"><label>ชั้นเรียน</label><select id="newStudentClass"></select></div>
+      <div class="form-group"><label>เลขที่</label><input type="number" id="newStudentNumber" placeholder="1" min="1"></div>
+    </div>
+    <button class="btn btn-green" onclick="doAddStudent()"><i class="fa-solid fa-plus"></i>เพิ่มนักเรียน</button>
+  </div>
+  <div class="card">
+    <div class="card-title"><i class="fa-solid fa-list"></i>รายชื่อนักเรียน</div>
+    <div class="filter-bar">
+      <div class="search-wrap"><i class="fa-solid fa-search"></i><input type="text" id="studentSearch" placeholder="ค้นหาชื่อ..." oninput="renderStudentsTable()"></div>
+      <select id="studentClassFilter" onchange="renderStudentsTable()"><option value="">ทุกชั้น</option></select>
+      <select id="studentStatusFilter" onchange="renderStudentsTable()">
+        <option value="active">นักเรียนปัจจุบัน</option>
+        <option value="transferred">ย้ายออกแล้ว</option>
+        <option value="graduated">จบการศึกษา</option>
+        <option value="">ทั้งหมด</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table><thead><tr><th>เลขที่</th><th>ชื่อ-นามสกุล</th><th>ชั้น</th><th>สถานะ</th><th>ยอดคงเหลือ</th><th>จัดการ</th></tr></thead>
+      <tbody id="studentsTableBody"></tbody></table>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ TRANSACTIONS ══════════ -->
+<section class="page" id="page-transactions">
+  <div class="sec-title"><i class="fa-solid fa-coins"></i>บันทึกฝาก-ถอนเงิน</div>
+  <div class="card">
+    <div class="tab-row">
+      <button class="tab-inner active" onclick="switchTxTab('deposit',this)"><i class="fa-solid fa-arrow-up" style="color:var(--green)"></i>ฝากเงิน</button>
+      <button class="tab-inner" onclick="switchTxTab('withdraw',this)"><i class="fa-solid fa-arrow-down" style="color:var(--red)"></i>ถอนเงิน</button>
+    </div>
+    <div class="tab-content active" id="tab-deposit">
+      <div class="form-row">
+        <div class="form-group"><label>ชั้นเรียน</label><select id="depClass" onchange="filterStudentsForTx('dep')"></select></div>
+        <div class="form-group"><label>นักเรียน</label><select id="depStudentId" onchange="updateBalDisp('dep')"></select></div>
+        <div class="form-group"><label>วันที่ฝาก</label><input type="date" id="depDate"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>จำนวนเงิน (บาท)</label><input type="number" id="depAmount" placeholder="0.00" min="1" step="0.01"></div>
+        <div class="form-group"><label>หมายเหตุ</label><input type="text" id="depNote" placeholder="หมายเหตุ (ถ้ามี)"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <button class="btn btn-green" onclick="doTransaction('DEPOSIT')"><i class="fa-solid fa-floppy-disk"></i>บันทึกการฝาก</button>
+        <span id="depBal" style="font-size:13px;color:var(--text-m)"></span>
+      </div>
+    </div>
+    <div class="tab-content" id="tab-withdraw">
+      <div class="info-box"><i class="fa-solid fa-circle-info"></i><div>ระบบตรวจสอบยอดเงินก่อนถอน หากยอดไม่พอจะไม่สามารถถอนได้</div></div>
+      <div class="form-row">
+        <div class="form-group"><label>ชั้นเรียน</label><select id="wdrClass" onchange="filterStudentsForTx('wdr')"></select></div>
+        <div class="form-group"><label>นักเรียน</label><select id="wdrStudentId" onchange="updateBalDisp('wdr')"></select></div>
+        <div class="form-group"><label>วันที่ถอน</label><input type="date" id="wdrDate"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>จำนวนเงิน (บาท)</label><input type="number" id="wdrAmount" placeholder="0.00" min="1" step="0.01"></div>
+        <div class="form-group"><label>หมายเหตุ</label><input type="text" id="wdrNote" placeholder="เช่น ค่าอุปกรณ์การเรียน"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <button class="btn btn-orange" onclick="doTransaction('WITHDRAW')"><i class="fa-solid fa-hand-holding-dollar"></i>บันทึกการถอน</button>
+        <span id="wdrBal" style="font-size:13px;color:var(--text-m)"></span>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><i class="fa-solid fa-clock-rotate-left"></i>ประวัติรายการ</div>
+    <div class="filter-bar">
+      <div class="search-wrap"><i class="fa-solid fa-search"></i><input type="text" id="txSearch" placeholder="ค้นหาชื่อ..." oninput="renderTxTable()"></div>
+      <select id="txClassFilter" onchange="renderTxTable()"><option value="">ทุกชั้น</option></select>
+      <select id="txTypeFilter" onchange="renderTxTable()"><option value="">ทุกประเภท</option><option value="DEPOSIT">ฝาก</option><option value="WITHDRAW">ถอน</option></select>
+      <input type="month" id="txMonthFilter" onchange="renderTxTable()">
+    </div>
+    <div class="table-wrap">
+      <table><thead><tr><th>วันที่</th><th>ประเภท</th><th>ชื่อนักเรียน</th><th>ชั้น</th><th>จำนวนเงิน</th><th>ยอดคงเหลือ</th><th>หมายเหตุ</th><th>ลบ</th></tr></thead>
+      <tbody id="txTableBody"></tbody></table>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ BY CLASS ══════════ -->
+<section class="page" id="page-byclass">
+  <div class="sec-title"><i class="fa-solid fa-layer-group"></i>ข้อมูลแยกตามชั้นเรียน</div>
+  <div class="class-grid" id="classSelectGrid"></div>
+  <div class="card" id="classDetailCard" style="display:none">
+    <div class="card-title"><i class="fa-solid fa-users"></i><span id="classDetailTitle">ชั้น -</span></div>
+    <div id="classDetailSummary" style="margin-bottom:12px"></div>
+    <div class="table-wrap"><table><thead><tr><th>เลขที่</th><th>ชื่อ-นามสกุล</th><th>ครั้งที่ฝาก</th><th>ครั้งที่ถอน</th><th>ยอดคงเหลือ</th></tr></thead>
+    <tbody id="classDetailBody"></tbody></table></div>
+  </div>
+</section>
+
+<!-- ══════════ PROMOTE ══════════ -->
+<section class="page" id="page-promote">
+  <div class="sec-title"><i class="fa-solid fa-graduation-cap"></i>เลื่อนชั้นนักเรียน</div>
+  <div class="card">
+    <div class="card-title"><i class="fa-solid fa-gear"></i>ตั้งค่าการเลื่อนชั้น</div>
+    <div class="info-box"><i class="fa-solid fa-circle-info"></i>
+      <div>นักเรียนจะถูกเลื่อนขึ้น 1 ระดับ • ม.3 → <strong>"จบการศึกษา"</strong> • นักเรียนที่ย้ายออก/จบแล้วจะไม่ถูกเลื่อน</div>
+    </div>
+    <div class="form-row" style="max-width:500px">
+      <div class="form-group"><label>ปีการศึกษา (พ.ศ.)</label><input type="number" id="promoYear" placeholder="2568" min="2560" max="2600"></div>
+      <div class="form-group"><label>เลื่อนชั้นเฉพาะ (ว่าง=ทั้งหมด)</label><select id="promoClassFilter"><option value="">เลื่อนทุกชั้นพร้อมกัน</option></select></div>
+    </div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-bottom:14px">
+      <button class="btn btn-primary" onclick="loadPromoPreview()"><i class="fa-solid fa-magnifying-glass"></i>แสดงรายชื่อ</button>
+      <button class="btn btn-ghost" onclick="togglePromo(true)"><i class="fa-solid fa-check-double"></i>เลือกทั้งหมด</button>
+      <button class="btn btn-ghost" onclick="togglePromo(false)"><i class="fa-solid fa-xmark"></i>ยกเลิกทั้งหมด</button>
+    </div>
+    <div id="promoPreviewWrap" style="display:none">
+      <div class="promo-list" id="promoList"></div>
+      <div style="margin-top:12px;display:flex;gap:9px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-purple" onclick="doPromotion()"><i class="fa-solid fa-circle-up"></i>ยืนยันเลื่อนชั้น</button>
+        <span id="promoCount" style="font-size:12.5px;color:var(--text-m)"></span>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><i class="fa-solid fa-history"></i>ประวัติการเลื่อนชั้น</div>
+    <div class="table-wrap"><table><thead><tr><th>ปีการศึกษา</th><th>ชื่อนักเรียน</th><th>จากชั้น</th><th>เป็นชั้น</th><th>วันที่</th></tr></thead>
+    <tbody id="promoHistoryBody"></tbody></table></div>
+  </div>
+</section>
+
+<!-- ══════════ EXPORT ══════════ -->
+<section class="page" id="page-export">
+  <div class="sec-title"><i class="fa-solid fa-file-export"></i>Export รายงาน</div>
+
+  <!-- ตัวเลือกการ Export -->
+  <div class="card">
+    <div class="card-title"><i class="fa-solid fa-sliders"></i>ตั้งค่าการ Export</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>ชั้นเรียน</label>
+        <select id="exportClass">
+          <option value="">ทุกชั้นเรียน</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>ประเภทรายงาน</label>
+        <select id="exportType">
+          <option value="daily">สรุปรายวัน</option>
+          <option value="monthly">สรุปรายเดือน</option>
+          <option value="student">สรุปรายบุคคล</option>
+        </select>
+      </div>
+      <div class="form-group" id="exportDateGroup">
+        <label>เดือน-ปี (สำหรับรายวัน)</label>
+        <input type="month" id="exportMonth">
+      </div>
+      <div class="form-group" id="exportYearGroup" style="display:none">
+        <label>ปี พ.ศ.</label>
+        <input type="number" id="exportYear" placeholder="2568" min="2560" max="2600">
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="previewExport()"><i class="fa-solid fa-eye"></i>แสดงตัวอย่าง</button>
+  </div>
+
+  <!-- Preview Table -->
+  <div class="card" id="exportPreviewCard" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+      <div class="card-title" style="margin-bottom:0"><i class="fa-solid fa-table"></i><span id="exportPreviewTitle">ตัวอย่าง</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-green btn-sm" onclick="doExportExcel()">
+          <i class="fa-solid fa-file-excel"></i>Export Excel (.xlsx)
+        </button>
+        <button class="btn btn-red btn-sm" onclick="doExportPDF()">
+          <i class="fa-solid fa-file-pdf"></i>Export PDF
+        </button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table><thead id="exportPreviewHead"></thead><tbody id="exportPreviewBody"></tbody></table>
+    </div>
+    <div id="exportSummaryRow" style="margin-top:10px;padding:10px 14px;background:var(--green-l);border-radius:9px;font-family:'Prompt',sans-serif;font-weight:700;font-size:14px;color:var(--green-d)"></div>
+  </div>
+</section>
+
+<!-- ══════════ AUDIT LOG ══════════ -->
+<section class="page" id="page-audit">
+  <div class="sec-title"><i class="fa-solid fa-shield-halved"></i>ประวัติการแก้ไขข้อมูล</div>
+
+  <div class="success-box" style="margin-bottom:14px">
+    <i class="fa-solid fa-lock"></i>
+    <div>บันทึกนี้เป็น <strong>ระบบอ่านอย่างเดียว</strong> — ทุกการเปลี่ยนแปลงข้อมูลในระบบจะถูกบันทึกอัตโนมัติ และ<strong>ไม่สามารถลบหรือแก้ไขได้</strong> เพื่อความโปร่งใส</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><i class="fa-solid fa-magnifying-glass"></i>ค้นหาและกรอง</div>
+    <div class="filter-bar">
+      <div class="search-wrap"><i class="fa-solid fa-search"></i><input type="text" id="auditSearch" placeholder="ค้นหาชื่อ หรือรายละเอียด..." oninput="renderAuditTable()"></div>
+      <select id="auditActionFilter" onchange="renderAuditTable()">
+        <option value="">ทุกประเภทการกระทำ</option>
+        <option value="ADD_STUDENT">เพิ่มนักเรียน</option>
+        <option value="EDIT_STUDENT">แก้ไขนักเรียน</option>
+        <option value="TRANSFER_OUT">นักเรียนย้ายออก</option>
+        <option value="DELETE_STUDENT">ลบนักเรียน</option>
+        <option value="ADD_TX">เพิ่มรายการธุรกรรม</option>
+        <option value="DELETE_TX">ลบรายการธุรกรรม</option>
+        <option value="PROMOTE">เลื่อนชั้น</option>
+      </select>
+      <input type="month" id="auditMonthFilter" onchange="renderAuditTable()">
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" onclick="loadAuditLog()"><i class="fa-solid fa-rotate"></i>โหลดข้อมูลใหม่</button>
+      <span id="auditCount" style="font-size:12.5px;color:var(--text-m);align-self:center"></span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>วันที่/เวลา</th>
+            <th>ประเภท</th>
+            <th>รายละเอียด</th>
+            <th>ID อ้างอิง</th>
+            <th>ผู้ดำเนินการ</th>
+          </tr>
+        </thead>
+        <tbody id="auditTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Audit Stats -->
+  <div class="card">
+    <div class="card-title"><i class="fa-solid fa-chart-bar"></i>สถิติการดำเนินการ</div>
+    <div id="auditStatsGrid" class="stats-grid"></div>
+  </div>
+</section>
+
+<!-- ══════════ REPORTS ══════════ -->
+<section class="page" id="page-reports">
+  <div class="sec-title"><i class="fa-solid fa-chart-line"></i>รายงานสรุป</div>
+  <div class="card">
+    <div class="card-title"><i class="fa-solid fa-calendar-days"></i>สรุปยอดรายเดือน</div>
+    <div class="filter-bar"><select id="reportClassFilter" onchange="renderMonthlyReport()"><option value="">ทุกชั้น</option></select></div>
+    <div class="table-wrap"><table><thead><tr><th>เดือน</th><th>ยอดฝาก</th><th>ยอดถอน</th><th>ยอดสุทธิ</th><th>รายการ</th></tr></thead>
+    <tbody id="reportMonthlyBody"></tbody></table></div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title"><i class="fa-solid fa-ranking-star"></i>Top 10 ยอดออมสูงสุด</div>
+      <div class="table-wrap"><table><thead><tr><th>อันดับ</th><th>ชื่อ</th><th>ชั้น</th><th>ยอดคงเหลือ</th></tr></thead>
+      <tbody id="topStudentsBody"></tbody></table></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><i class="fa-solid fa-chart-pie"></i>สัดส่วนยอดออมแต่ละชั้น</div>
+      <div class="chart-wrap"><canvas id="pieChart"></canvas></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- Modal: Edit Student -->
+<div class="modal-bg" id="editStudentModal">
+  <div class="modal">
+    <div class="modal-header"><span><i class="fa-solid fa-pen"></i> แก้ไขข้อมูลนักเรียน</span><button class="modal-close" onclick="closeModal('editStudentModal')"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="editStudentId">
+      <div class="form-group" style="margin-bottom:11px"><label>ชื่อ-นามสกุล</label><input type="text" id="editStudentName"></div>
+      <div class="form-row">
+        <div class="form-group"><label>ชั้นเรียน</label><select id="editStudentClass"></select></div>
+        <div class="form-group"><label>เลขที่</label><input type="number" id="editStudentNumber" min="1"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('editStudentModal')">ยกเลิก</button>
+      <button class="btn btn-primary" onclick="doEditStudent()"><i class="fa-solid fa-check"></i>บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Transfer Out -->
+<div class="modal-bg" id="transferModal">
+  <div class="modal">
+    <div class="modal-header"><span><i class="fa-solid fa-right-from-bracket"></i> นักเรียนย้ายออก</span><button class="modal-close" onclick="closeModal('transferModal')"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="transferStudentId">
+      <div class="danger-box"><i class="fa-solid fa-triangle-exclamation"></i><div>นักเรียน <strong id="transferStudentName"></strong> จะเปลี่ยนสถานะเป็น "ย้ายออก" — ข้อมูลการออมยังคงอยู่</div></div>
+      <div class="form-group"><label>หมายเหตุ</label><textarea id="transferNote" placeholder="เช่น ย้ายไปโรงเรียนอื่น..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('transferModal')">ยกเลิก</button>
+      <button class="btn btn-orange" onclick="doTransferOut()"><i class="fa-solid fa-right-from-bracket"></i>ยืนยันย้ายออก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Delete Permanent -->
+<div class="modal-bg" id="deleteModal">
+  <div class="modal">
+    <div class="modal-header"><span><i class="fa-solid fa-trash"></i> ลบนักเรียนถาวร</span><button class="modal-close" onclick="closeModal('deleteModal')"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="deleteStudentId">
+      <div class="danger-box"><i class="fa-solid fa-triangle-exclamation"></i><div>การลบถาวรจะ<strong>ลบข้อมูลการออมทั้งหมด</strong>ของ <strong id="deleteStudentName"></strong> ไม่สามารถกู้คืนได้</div></div>
+      <p style="font-size:13.5px;color:var(--text-m)">หากต้องการเก็บประวัติ ควรใช้ <strong>"บันทึกย้ายออก"</strong> แทน</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('deleteModal')">ยกเลิก</button>
+      <button class="btn btn-red" onclick="doDeletePermanent()"><i class="fa-solid fa-trash"></i>ลบถาวร</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// STATE & CONSTANTS
+// ══════════════════════════════════════════════════════════
+var CLASSES = ["อ.2","อ.3","ป.1","ป.2","ป.3","ป.4","ป.5","ป.6","ม.1","ม.2","ม.3"];
+var NEXT_CLASS = {"อ.2":"อ.3","อ.3":"ป.1","ป.1":"ป.2","ป.2":"ป.3","ป.3":"ป.4","ป.4":"ป.5","ป.5":"ป.6","ป.6":"ม.1","ม.1":"ม.2","ม.2":"ม.3","ม.3":"จบการศึกษา"};
+var STATUS_LABEL = {active:"ปัจจุบัน",transferred:"ย้ายออก",graduated:"จบการศึกษา"};
+var STATUS_BADGE = {active:"badge-green",transferred:"badge-orange",graduated:"badge-teal"};
+var ACTION_LABEL = {ADD_STUDENT:"เพิ่มนักเรียน",EDIT_STUDENT:"แก้ไขนักเรียน",TRANSFER_OUT:"ย้ายออก",DELETE_STUDENT:"ลบนักเรียน",ADD_TX:"เพิ่มธุรกรรม",DELETE_TX:"ลบธุรกรรม",PROMOTE:"เลื่อนชั้น"};
+
+var appStudents = [];
+var appTx       = [];
+var appAudit    = [];
+var exportRows  = [];  // เก็บ data แถวที่ preview ไว้ export
+
+// ══════════════════════════════════════════════════════════
+// GAS BRIDGE — ส่ง JSON string, รับ JSON string
+// ══════════════════════════════════════════════════════════
+function gasCall(fn, arg) {
+  return new Promise(function(res, rej) {
+    var runner = google.script.run
+      .withSuccessHandler(function(str) {
+        try { res(JSON.parse(str)); }
+        catch(e) { rej(new Error("Parse: "+e.message+" | raw: "+String(str).slice(0,120))); }
+      })
+      .withFailureHandler(rej);
+    if (arg !== undefined) runner[fn](arg); else runner[fn]();
+  });
+}
+
+function loadAll() {
+  return new Promise(function(res, rej) {
+    showLoading(true,"กำลังโหลดข้อมูลจาก Google Sheets...");
+    google.script.run
+      .withSuccessHandler(function(str) {
+        try {
+          var r = JSON.parse(str);
+          if (r.success) {
+            appStudents = r.students||[];
+            appTx       = r.transactions||[];
+            showLoading(false); refreshAll(); res();
+          } else { showLoading(false); showToast("โหลดล้มเหลว: "+(r.error||""),"error"); rej(); }
+        } catch(e) { showLoading(false); showToast("Parse error: "+e.message,"error"); rej(); }
+      })
+      .withFailureHandler(function(e){ showLoading(false); showToast("เชื่อมต่อล้มเหลว","error"); rej(); })
+      .loadAllData();
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════════
+function fmt(n){ return Number(n||0).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtDate(d){
+  try{ var dt=new Date(d); return isNaN(dt)?String(d):dt.toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}); }
+  catch(e){ return String(d); }
+}
+function fmtDateTime(d){
+  try{ var dt=new Date(d); return isNaN(dt)?String(d):dt.toLocaleString('th-TH',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); }
+  catch(e){ return String(d); }
+}
+function getStudentById(id){ for(var i=0;i<appStudents.length;i++){if(appStudents[i].id===id)return appStudents[i];} return {name:"ไม่พบ",className:""}; }
+function getBalance(sid){ var b=0; for(var i=0;i<appTx.length;i++){if(appTx[i].studentId===sid) b+=appTx[i].type==="DEPOSIT"?appTx[i].amount:-appTx[i].amount;} return b; }
+function getClassBalance(cls){ var b=0; for(var i=0;i<appStudents.length;i++){if(appStudents[i].className===cls&&appStudents[i].status==="active") b+=getBalance(appStudents[i].id);} return b; }
+function showLoading(v,msg){ var el=document.getElementById("loadingOverlay"); el.classList.toggle("show",v); if(msg)document.getElementById("loadingMsg").textContent=msg; }
+function openModal(id){ document.getElementById(id).classList.add("show"); }
+function closeModal(id){ document.getElementById(id).classList.remove("show"); }
+function showToast(msg,type){
+  type=type||"info";
+  var ic={success:"fa-circle-check",error:"fa-circle-xmark",info:"fa-circle-info"};
+  var el=document.createElement("div"); el.className="toast-item "+type;
+  el.innerHTML='<i class="fa-solid '+(ic[type]||ic.info)+'"></i>'+msg;
+  document.getElementById("toast").appendChild(el);
+  setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);},3600);
+}
+
+function switchPage(name,btn){
+  document.querySelectorAll(".page").forEach(function(p){p.classList.remove("active");});
+  document.querySelectorAll(".nav-btn").forEach(function(b){b.classList.remove("active");});
+  document.getElementById("page-"+name).classList.add("active");
+  btn.classList.add("active");
+  if(name==="dashboard")  refreshDashboard();
+  if(name==="reports")    refreshReports();
+  if(name==="byclass")    renderClassGrid();
+  if(name==="promote")    {loadPromoYearDefault();renderPromoHistory();}
+  if(name==="audit")      loadAuditLog();
+  if(name==="export")     populateExportSelects();
+}
+function switchTxTab(name,btn){
+  document.querySelectorAll(".tab-inner").forEach(function(b){b.classList.remove("active");});
+  document.querySelectorAll(".tab-content").forEach(function(c){c.classList.remove("active");});
+  btn.classList.add("active"); document.getElementById("tab-"+name).classList.add("active");
+}
+
+function populateSelects(){
+  var all=["newStudentClass","editStudentClass","depClass","wdrClass",
+           "studentClassFilter","txClassFilter","reportClassFilter","promoClassFilter"];
+  all.forEach(function(id){
+    var el=document.getElementById(id); if(!el)return;
+    var hasAll=["studentClassFilter","txClassFilter","reportClassFilter","promoClassFilter"].indexOf(id)>=0;
+    el.innerHTML=(hasAll?'<option value="">ทุกชั้น</option>':"")+
+      CLASSES.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join("");
+  });
+}
+function populateExportSelects(){
+  var el=document.getElementById("exportClass");
+  el.innerHTML='<option value="">ทุกชั้นเรียน</option>'+
+    CLASSES.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join("");
+  var m=document.getElementById("exportMonth");
+  if(!m.value){var now=new Date();m.value=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0");}
+  var y=document.getElementById("exportYear");
+  if(!y.value) y.value=new Date().getFullYear()+543;
+}
+function onExportTypeChange(){
+  var t=document.getElementById("exportType").value;
+  document.getElementById("exportDateGroup").style.display=t==="monthly"?"none":"";
+  document.getElementById("exportYearGroup").style.display=t==="monthly"?"":"none";
+}
+
+function filterStudentsForTx(prefix){
+  var cls=document.getElementById(prefix+"Class").value;
+  var sel=document.getElementById(prefix+"StudentId");
+  var list=appStudents.filter(function(s){return s.status==="active"&&(cls?s.className===cls:true);})
+    .sort(function(a,b){return CLASSES.indexOf(a.className)-CLASSES.indexOf(b.className)||(Number(a.number)||0)-(Number(b.number)||0);});
+  sel.innerHTML=list.length
+    ? list.map(function(s){return '<option value="'+s.id+'">'+s.className+' เลขที่'+s.number+' '+s.name+'</option>';}).join("")
+    : '<option value="">-- ไม่มีนักเรียน --</option>';
+  updateBalDisp(prefix);
+}
+function updateBalDisp(prefix){
+  var id=document.getElementById(prefix+"StudentId").value;
+  var el=document.getElementById(prefix+"Bal"); if(!el)return;
+  if(!id){el.textContent="";return;}
+  el.innerHTML='ยอดคงเหลือ: <strong class="money">฿'+fmt(getBalance(id))+'</strong>';
+}
+
+// ══════════════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════════════
+var classChartI=null,monthlyChartI=null;
+function refreshDashboard(){
+  var dep=0,wdr=0;
+  appTx.forEach(function(t){if(t.type==="DEPOSIT")dep+=t.amount;else wdr+=t.amount;});
+  document.getElementById("grandTotal").textContent=fmt(dep-wdr);
+  document.getElementById("totalDeposit").textContent=fmt(dep);
+  document.getElementById("totalWithdraw").textContent=fmt(wdr);
+  document.getElementById("studentCount").textContent=appStudents.filter(function(s){return s.status==="active";}).length;
+  var colors=["#0ea5e9","#22c55e","#fbbf24","#f472b6","#a855f7","#06b6d4","#f97316","#84cc16","#6366f1","#14b8a6","#ef4444"];
+  if(classChartI)classChartI.destroy();
+  classChartI=new Chart(document.getElementById("classChart"),{type:"bar",data:{labels:CLASSES,datasets:[{label:"ยอดสุทธิ",data:CLASSES.map(function(c){return getClassBalance(c);}),backgroundColor:colors,borderRadius:7,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return "฿"+fmt(c.raw);}}}},scales:{y:{ticks:{callback:function(v){return "฿"+v.toLocaleString();}},grid:{color:"#f1f5f9"}},x:{grid:{display:false}}}}});
+  var mMap={};
+  appTx.forEach(function(t){if(t.type!=="DEPOSIT")return;var d=new Date(t.date),k=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");mMap[k]=(mMap[k]||0)+t.amount;});
+  var mKeys=Object.keys(mMap).sort();
+  if(monthlyChartI)monthlyChartI.destroy();
+  monthlyChartI=new Chart(document.getElementById("monthlyChart"),{type:"line",data:{labels:mKeys.map(function(k){var p=k.split("-");return new Date(p[0],p[1]-1).toLocaleDateString("th-TH",{year:"numeric",month:"short"});}),datasets:[{label:"ฝากเงิน",data:mKeys.map(function(k){return mMap[k];}),borderColor:"#0ea5e9",backgroundColor:"rgba(14,165,233,.12)",fill:true,tension:.45,pointBackgroundColor:"#0ea5e9",pointRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return "฿"+fmt(c.raw);}}}},scales:{y:{ticks:{callback:function(v){return "฿"+v.toLocaleString();}},grid:{color:"#f1f5f9"}},x:{grid:{display:false}}}}});
+}
+
+// ══════════════════════════════════════════════════════════
+// STUDENTS
+// ══════════════════════════════════════════════════════════
+function renderStudentsTable(){
+  var q=document.getElementById("studentSearch").value.toLowerCase();
+  var cls=document.getElementById("studentClassFilter").value;
+  var sta=document.getElementById("studentStatusFilter").value;
+  var list=appStudents.filter(function(s){return (!cls||s.className===cls)&&(!sta||s.status===sta)&&(!q||s.name.toLowerCase().indexOf(q)>=0);})
+    .sort(function(a,b){return CLASSES.indexOf(a.className)-CLASSES.indexOf(b.className)||(Number(a.number)||0)-(Number(b.number)||0);});
+  var html="";
+  if(!list.length){html='<tr><td colspan="6" class="no-data">ไม่พบข้อมูล</td></tr>';}
+  else list.forEach(function(s){
+    var bal=getBalance(s.id);
+    var rc=s.status==="transferred"?"row-transferred":s.status==="graduated"?"row-graduated":"";
+    var esc=s.name.replace(/'/g,"\\'").replace(/"/g,"&quot;");
+    var btns=s.status==="active"
+      ?'<button class="btn btn-yellow btn-sm" onclick="openEditStudent(\''+s.id+'\')"><i class="fa-solid fa-pen"></i></button>'
+       +'<button class="btn btn-orange btn-sm" onclick="openTransferModal(\''+s.id+'\')"><i class="fa-solid fa-right-from-bracket"></i></button>'
+       +'<button class="btn btn-red btn-sm" onclick="openDeleteModal(\''+s.id+'\',\''+esc+'\')"><i class="fa-solid fa-trash"></i></button>'
+      :'<button class="btn btn-red btn-sm" onclick="openDeleteModal(\''+s.id+'\',\''+esc+'\')"><i class="fa-solid fa-trash"></i></button>';
+    html+='<tr class="'+rc+'"><td><span class="badge badge-sky">'+(s.number||"-")+'</span></td>'
+      +'<td><strong>'+s.name+'</strong>'+(s.statusNote?'<br><span style="font-size:11px;color:var(--text-s)">'+s.statusNote+'</span>':"")+'</td>'
+      +'<td><span class="badge badge-green">'+s.className+'</span></td>'
+      +'<td><span class="badge '+(STATUS_BADGE[s.status]||"badge-gray")+'">'+(STATUS_LABEL[s.status]||s.status)+'</span></td>'
+      +'<td><span class="'+(bal<0?"money-neg":"money")+'">฿'+fmt(bal)+'</span></td>'
+      +'<td><div class="action-row">'+btns+'</div></td></tr>';
+  });
+  document.getElementById("studentsTableBody").innerHTML=html;
+}
+
+function doAddStudent(){
+  var name=document.getElementById("newStudentName").value.trim();
+  var cls=document.getElementById("newStudentClass").value;
+  var num=document.getElementById("newStudentNumber").value;
+  if(!name){showToast("กรุณากรอกชื่อ-นามสกุล","error");return;}
+  if(!num){showToast("กรุณากรอกเลขที่","error");return;}
+  showLoading(true,"กำลังบันทึก...");
+  gasCall("addStudent",JSON.stringify({name:name,className:cls,number:Number(num)}))
+    .then(function(r){showLoading(false);if(r.success){appStudents.push({id:r.id,name:name,className:cls,number:Number(num),status:"active",statusNote:"",createdAt:""});showToast("เพิ่มนักเรียนสำเร็จ!","success");document.getElementById("newStudentName").value="";document.getElementById("newStudentNumber").value="";refreshAll();}else showToast(r.error,"error");})
+    .catch(function(e){showLoading(false);showToast(String(e.message||e),"error");});
+}
+function openEditStudent(id){
+  var s=appStudents.find(function(x){return x.id===id;});if(!s)return;
+  document.getElementById("editStudentId").value=s.id;
+  document.getElementById("editStudentName").value=s.name;
+  document.getElementById("editStudentClass").value=s.className;
+  document.getElementById("editStudentNumber").value=s.number;
+  openModal("editStudentModal");
+}
+function doEditStudent(){
+  var id=document.getElementById("editStudentId").value;
+  var name=document.getElementById("editStudentName").value.trim();
+  var cls=document.getElementById("editStudentClass").value;
+  var num=document.getElementById("editStudentNumber").value;
+  if(!name){showToast("กรุณากรอกชื่อ","error");return;}
+  showLoading(true,"กำลังบันทึก...");
+  gasCall("updateStudent",JSON.stringify({id:id,name:name,className:cls,number:Number(num)}))
+    .then(function(r){showLoading(false);if(r.success){var idx=appStudents.findIndex(function(s){return s.id===id;});if(idx>=0)Object.assign(appStudents[idx],{name:name,className:cls,number:Number(num)});showToast("แก้ไขสำเร็จ!","success");closeModal("editStudentModal");refreshAll();}else showToast(r.error,"error");})
+    .catch(function(e){showLoading(false);showToast(String(e.message||e),"error");});
+}
+function openTransferModal(id){
+  var s=appStudents.find(function(x){return x.id===id;});if(!s)return;
+  document.getElementById("transferStudentId").value=id;
+  document.getElementById("transferStudentName").textContent=s.name;
+  document.getElementById("transferNote").value="";
+  openModal("transferModal");
+}
+function doTransferOut(){
+  var id=document.getElementById("transferStudentId").value;
+  var note=document.getElementById("transferNote").value.trim()||"ย้ายออก";
+  showLoading(true,"กำลังบันทึก...");
+  gasCall("transferOutStudent",JSON.stringify({id:id,note:note}))
+    .then(function(r){showLoading(false);if(r.success){var idx=appStudents.findIndex(function(s){return s.id===id;});if(idx>=0)Object.assign(appStudents[idx],{status:"transferred",statusNote:note});showToast("บันทึกย้ายออกสำเร็จ","success");closeModal("transferModal");refreshAll();}else showToast(r.error,"error");})
+    .catch(function(e){showLoading(false);showToast(String(e.message||e),"error");});
+}
+function openDeleteModal(id,name){
+  document.getElementById("deleteStudentId").value=id;
+  document.getElementById("deleteStudentName").textContent=name;
+  openModal("deleteModal");
+}
+function doDeletePermanent(){
+  var id=document.getElementById("deleteStudentId").value;
+  showLoading(true,"กำลังลบ...");
+  gasCall("deleteStudentPermanent",id)
+    .then(function(r){showLoading(false);if(r.success){appStudents=appStudents.filter(function(s){return s.id!==id;});appTx=appTx.filter(function(t){return t.studentId!==id;});showToast("ลบสำเร็จ","success");closeModal("deleteModal");refreshAll();}else showToast(r.error,"error");})
+    .catch(function(e){showLoading(false);showToast(String(e.message||e),"error");});
+}
+
+// ══════════════════════════════════════════════════════════
+// TRANSACTIONS
+// ══════════════════════════════════════════════════════════
+function renderTxTable(){
+  var q=document.getElementById("txSearch").value.toLowerCase();
+  var cls=document.getElementById("txClassFilter").value;
+  var typ=document.getElementById("txTypeFilter").value;
+  var mon=document.getElementById("txMonthFilter").value;
+  var clsIds=cls?appStudents.filter(function(s){return s.className===cls;}).map(function(s){return s.id;}):null;
+  var list=appTx.filter(function(t){
+    if(clsIds&&clsIds.indexOf(t.studentId)<0)return false;
+    if(typ&&t.type!==typ)return false;
+    if(mon){var d=new Date(t.date),k=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");if(k!==mon)return false;}
+    if(q){var st=getStudentById(t.studentId);if(st.name.toLowerCase().indexOf(q)<0)return false;}
+    return true;
+  }).sort(function(a,b){return new Date(b.date)-new Date(a.date)||new Date(b.createdAt)-new Date(a.createdAt);});
+  var html="";
+  if(!list.length)html='<tr><td colspan="8" class="no-data">ไม่พบรายการ</td></tr>';
+  else list.forEach(function(t){
+    var st=getStudentById(t.studentId);
+    var badge=t.type==="DEPOSIT"?'<span class="tx-deposit"><i class="fa-solid fa-arrow-up"></i>ฝาก</span>':'<span class="tx-withdraw"><i class="fa-solid fa-arrow-down"></i>ถอน</span>';
+    var sign=t.type==="DEPOSIT"?"+":"-";
+    html+='<tr><td>'+fmtDate(t.date)+'</td><td>'+badge+'</td><td><strong>'+st.name+'</strong></td>'
+      +'<td><span class="badge badge-green">'+st.className+'</span></td>'
+      +'<td><span class="'+(t.type==="DEPOSIT"?"money":"money-neg")+'">'+sign+'฿'+fmt(t.amount)+'</span></td>'
+      +'<td><span class="money">฿'+fmt(t.balance)+'</span></td>'
+      +'<td style="font-size:12px;color:var(--text-s)">'+(t.note||"-")+'</td>'
+      +'<td><button class="btn btn-red btn-sm" onclick="confirmDeleteTx(\''+t.id+'\')"><i class="fa-solid fa-trash"></i></button></td></tr>';
+  });
+  document.getElementById("txTableBody").innerHTML=html;
+}
+function doTransaction(type){
+  var px=type==="DEPOSIT"?"dep":"wdr";
+  var sid=document.getElementById(px+"StudentId").value;
+  var dt=document.getElementById(px+"Date").value;
+  var amt=Number(document.getElementById(px+"Amount").value);
+  var nt=document.getElementById(px+"Note").value.trim();
+  if(!sid){showToast("กรุณาเลือกนักเรียน","error");return;}
+  if(!dt){showToast("กรุณาเลือกวันที่","error");return;}
+  if(!amt||amt<=0){showToast("กรุณากรอกจำนวนเงิน","error");return;}
+  if(type==="WITHDRAW"){var bal=getBalance(sid);if(amt>bal){showToast("ยอดเงินไม่พอ (คงเหลือ ฿"+fmt(bal)+")","error");return;}}
+  showLoading(true,"กำลังบันทึก...");
+  gasCall("addTransaction",JSON.stringify({studentId:sid,type:type,date:dt,amount:amt,note:nt}))
+    .then(function(r){showLoading(false);if(r.success){var nb=getBalance(sid)+(type==="DEPOSIT"?amt:-amt);appTx.push({id:r.id,studentId:sid,type:type,date:dt,amount:amt,balance:nb,note:nt,createdAt:new Date().toISOString()});showToast(type==="DEPOSIT"?"บันทึกการฝากสำเร็จ!":"บันทึกการถอนสำเร็จ!","success");document.getElementById(px+"Amount").value="";document.getElementById(px+"Note").value="";updateBalDisp(px);refreshAll();}else showToast(r.error,"error");})
+    .catch(function(e){showLoading(false);showToast(String(e.message||e),"error");});
+}
+function confirmDeleteTx(id){
+  if(!confirm("ยืนยันการลบรายการนี้?"))return;
+  showLoading(true,"กำลังลบ...");
+  gasCall("deleteTransaction",id)
+    .then(function(r){showLoading(false);if(r.success){appTx=appTx.filter(function(t){return t.id!==id;});var byS={};appTx.forEach(function(t){if(!byS[t.studentId])byS[t.studentId]=[];byS[t.studentId].push(t);});Object.keys(byS).forEach(function(sid){byS[sid].sort(function(a,b){return new Date(a.createdAt)-new Date(b.createdAt);});var run=0;byS[sid].forEach(function(t){run+=t.type==="DEPOSIT"?t.amount:-t.amount;t.balance=run;});});showToast("ลบสำเร็จ","success");refreshAll();}else showToast(r.error,"error");})
+    .catch(function(e){showLoading(false);showToast(String(e.message||e),"error");});
+}
+
+// ══════════════════════════════════════════════════════════
+// BY CLASS
+// ══════════════════════════════════════════════════════════
+function renderClassGrid(){
+  document.getElementById("classSelectGrid").innerHTML=CLASSES.map(function(c){
+    var bal=getClassBalance(c),cnt=appStudents.filter(function(s){return s.className===c&&s.status==="active";}).length;
+    return '<div class="class-badge" onclick="showClassDetail(\''+c+'\',this)"><div class="class-badge-name">'+c+'</div><div class="class-badge-total">'+cnt+' คน</div><div class="class-badge-total">฿'+fmt(bal)+'</div></div>';
+  }).join("");
+}
+function showClassDetail(cls,el){
+  document.querySelectorAll(".class-badge").forEach(function(b){b.classList.remove("active");});
+  el.classList.add("active");
+  var students=appStudents.filter(function(s){return s.className===cls&&s.status==="active";}).sort(function(a,b){return(Number(a.number)||0)-(Number(b.number)||0);});
+  var total=getClassBalance(cls);
+  document.getElementById("classDetailTitle").textContent="ชั้น "+cls;
+  document.getElementById("classDetailSummary").innerHTML='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px"><div class="stat-card" style="flex:1;min-width:120px;padding:11px"><div class="stat-icon green"><i class="fa-solid fa-users"></i></div><div><div class="stat-label">นักเรียน</div><div class="stat-value">'+students.length+' คน</div></div></div><div class="stat-card" style="flex:1;min-width:120px;padding:11px"><div class="stat-icon sky"><i class="fa-solid fa-coins"></i></div><div><div class="stat-label">ยอดออมสุทธิ</div><div class="stat-value money">฿'+fmt(total)+'</div></div></div></div>';
+  document.getElementById("classDetailBody").innerHTML=students.length
+    ?students.map(function(s){var dep=appTx.filter(function(t){return t.studentId===s.id&&t.type==="DEPOSIT";}).length,wdr=appTx.filter(function(t){return t.studentId===s.id&&t.type==="WITHDRAW";}).length;return '<tr><td><span class="badge badge-sky">'+s.number+'</span></td><td>'+s.name+'</td><td>'+dep+' ครั้ง</td><td>'+wdr+' ครั้ง</td><td><span class="money">฿'+fmt(getBalance(s.id))+'</span></td></tr>';}).join("")
+    :'<tr><td colspan="5" class="no-data">ไม่มีนักเรียน</td></tr>';
+  document.getElementById("classDetailCard").style.display="block";
+}
+
+// ══════════════════════════════════════════════════════════
+// PROMOTE
+// ══════════════════════════════════════════════════════════
+function loadPromoYearDefault(){var el=document.getElementById("promoYear");if(!el.value)el.value=new Date().getFullYear()+543;}
+function loadPromoPreview(){
+  var cls=document.getElementById("promoClassFilter").value;
+  var list=appStudents.filter(function(s){return s.status==="active"&&(cls?s.className===cls:true)&&NEXT_CLASS[s.className];})
+    .sort(function(a,b){return CLASSES.indexOf(a.className)-CLASSES.indexOf(b.className)||(Number(a.number)||0)-(Number(b.number)||0);});
+  if(!list.length){showToast("ไม่มีนักเรียนที่สามารถเลื่อนชั้นได้","info");return;}
+  document.getElementById("promoList").innerHTML=list.map(function(s){
+    var next=NEXT_CLASS[s.className];
+    return '<div class="promo-row"><input type="checkbox" class="promo-check" id="pc_'+s.id+'" value="'+s.id+'" checked onchange="updatePromoCount()"><label for="pc_'+s.id+'" class="promo-name"><strong>'+s.name+'</strong></label><div style="display:flex;align-items:center;gap:4px;font-size:12px"><span class="badge badge-green">'+s.className+'</span><i class="fa-solid fa-arrow-right" style="color:var(--sky)"></i><span class="badge '+(next==="จบการศึกษา"?"badge-teal":"badge-sky")+'">'+next+'</span></div></div>';
+  }).join("");
+  document.getElementById("promoPreviewWrap").style.display="block";
+  updatePromoCount();
+}
+function updatePromoCount(){var n=[].filter.call(document.querySelectorAll(".promo-check"),function(c){return c.checked;}).length;document.getElementById("promoCount").textContent="เลือกแล้ว "+n+" คน";}
+function togglePromo(v){document.querySelectorAll(".promo-check").forEach(function(c){c.checked=v;});updatePromoCount();}
+function doPromotion(){
+  var checks=[].filter.call(document.querySelectorAll(".promo-check:checked"),function(c){return c.checked;});
+  if(!checks.length){showToast("กรุณาเลือกนักเรียนอย่างน้อย 1 คน","error");return;}
+  var year=Number(document.getElementById("promoYear").value)||(new Date().getFullYear()+543);
+  var cls=document.getElementById("promoClassFilter").value||null;
+  var includeIds=checks.map(function(c){return c.value;});
+  var allIds=appStudents.filter(function(s){return s.status==="active"&&(cls?s.className===cls:true)&&NEXT_CLASS[s.className];}).map(function(s){return s.id;});
+  var excludeIds=allIds.filter(function(id){return includeIds.indexOf(id)<0;});
+  if(!confirm("ยืนยันเลื่อนชั้น "+checks.length+" คน ปีการศึกษา "+year+"?\nไม่สามารถย้อนกลับได้"))return;
+  showLoading(true,"กำลังเลื่อนชั้น...");
+  gasCall("promoteStudents",JSON.stringify({academicYear:year,classFilter:cls,excludeIds:excludeIds}))
+    .then(function(r){showLoading(false);if(r.success){showToast("เลื่อนชั้นสำเร็จ! เลื่อน "+r.promoted+" คน, จบ "+r.graduated+" คน","success");document.getElementById("promoPreviewWrap").style.display="none";loadAll();}else showToast(r.error,"error");})
+    .catch(function(e){showLoading(false);showToast(String(e.message||e),"error");});
+}
+function renderPromoHistory(){
+  gasCall("getPromotionHistory")
+    .then(function(r){
+      var data=(r.success&&r.data)?r.data.slice().reverse():[];
+      document.getElementById("promoHistoryBody").innerHTML=data.length
+        ?data.map(function(h){return '<tr><td>'+h.academicYear+'</td><td>'+h.studentName+'</td><td><span class="badge badge-yellow">'+h.fromClass+'</span></td><td><span class="badge '+(h.toClass==="จบการศึกษา"?"badge-teal":"badge-sky")+'">'+h.toClass+'</span></td><td style="font-size:12px;color:var(--text-s)">'+fmtDate(h.promotedAt)+'</td></tr>';}).join("")
+        :'<tr><td colspan="5" class="no-data">ยังไม่มีประวัติ</td></tr>';
+    }).catch(function(){document.getElementById("promoHistoryBody").innerHTML='<tr><td colspan="5" class="no-data">โหลดไม่ได้</td></tr>';});
+}
+
+// ══════════════════════════════════════════════════════════
+// AUDIT LOG
+// ══════════════════════════════════════════════════════════
+function loadAuditLog(){
+  showLoading(true,"กำลังโหลดประวัติการแก้ไข...");
+  gasCall("getAuditLog")
+    .then(function(r){
+      showLoading(false);
+      appAudit=(r.success&&r.data)?r.data:[];
+      renderAuditTable();
+      renderAuditStats();
+    }).catch(function(e){showLoading(false);showToast("โหลด Audit Log ล้มเหลว","error");});
+}
+
+function renderAuditTable(){
+  var q=document.getElementById("auditSearch").value.toLowerCase();
+  var act=document.getElementById("auditActionFilter").value;
+  var mon=document.getElementById("auditMonthFilter").value;
+  var list=appAudit.filter(function(a){
+    if(act&&a.action!==act)return false;
+    if(mon){var d=new Date(a.timestamp),k=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");if(k!==mon)return false;}
+    if(q&&a.detail.toLowerCase().indexOf(q)<0&&a.action.toLowerCase().indexOf(q)<0)return false;
+    return true;
+  });
+  document.getElementById("auditCount").textContent="แสดง "+list.length+" / "+appAudit.length+" รายการ";
+  var html="";
+  if(!list.length)html='<tr><td colspan="5" class="no-data">ไม่พบรายการ</td></tr>';
+  else list.forEach(function(a){
+    var badge='<span class="audit-action audit-'+a.action+'">'+(ACTION_LABEL[a.action]||a.action)+'</span>';
+    html+='<tr>'
+      +'<td style="font-size:12px;white-space:nowrap">'+fmtDateTime(a.timestamp)+'</td>'
+      +'<td>'+badge+'</td>'
+      +'<td style="font-size:12.5px;max-width:340px">'+a.detail+'</td>'
+      +'<td style="font-size:11px;color:var(--text-s)">'+a.targetId+'</td>'
+      +'<td style="font-size:12px;color:var(--text-s)">'+(a.userEmail||"-")+'</td>'
+      +'</tr>';
+  });
+  document.getElementById("auditTableBody").innerHTML=html;
+}
+
+function renderAuditStats(){
+  var counts={};
+  appAudit.forEach(function(a){counts[a.action]=(counts[a.action]||0)+1;});
+  var iconMap={ADD_STUDENT:"fa-user-plus",EDIT_STUDENT:"fa-pen",TRANSFER_OUT:"fa-right-from-bracket",DELETE_STUDENT:"fa-trash",ADD_TX:"fa-coins",DELETE_TX:"fa-receipt",PROMOTE:"fa-graduation-cap"};
+  var colorMap={ADD_STUDENT:"green",EDIT_STUDENT:"sky",TRANSFER_OUT:"orange",DELETE_STUDENT:"red",ADD_TX:"teal",DELETE_TX:"amber",PROMOTE:"purple"};
+  var html="";
+  Object.keys(ACTION_LABEL).forEach(function(k){
+    html+='<div class="stat-card"><div class="stat-icon '+colorMap[k]+'"><i class="fa-solid '+(iconMap[k]||"fa-circle")+'"></i></div>'
+      +'<div><div class="stat-label">'+ACTION_LABEL[k]+'</div><div class="stat-value">'+(counts[k]||0)+'</div><div class="stat-sub">ครั้ง</div></div></div>';
+  });
+  document.getElementById("auditStatsGrid").innerHTML=html;
+}
+
+// ══════════════════════════════════════════════════════════
+// EXPORT — Preview + PDF + Excel
+// ══════════════════════════════════════════════════════════
+document.addEventListener("change", function(e){
+  if(e.target && e.target.id==="exportType") onExportTypeChange();
+});
+
+function buildExportData(){
+  var cls   = document.getElementById("exportClass").value;
+  var type  = document.getElementById("exportType").value;
+  var month = document.getElementById("exportMonth").value;
+  var year  = Number(document.getElementById("exportYear").value)||0;
+
+  // กรองนักเรียนตามชั้น
+  var students = appStudents.filter(function(s){
+    return s.status==="active"&&(cls?s.className===cls:true);
+  });
+  var stuIds = students.map(function(s){return s.id;});
+
+  // กรอง tx
+  var txFiltered = appTx.filter(function(t){return stuIds.indexOf(t.studentId)>=0;});
+
+  var schoolName = "โรงเรียนบ้านหัวหนองแวง(สามัคคีราษฎร์บำรุง)";
+  var clsLabel   = cls||"ทุกชั้นเรียน";
+
+  if(type==="daily"){
+    // รายวันในเดือนที่เลือก
+    if(!month){showToast("กรุณาเลือกเดือน","error");return null;}
+    var txMonth = txFiltered.filter(function(t){
+      var d=new Date(t.date),k=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+      return k===month;
+    });
+    // group by date
+    var dayMap={};
+    txMonth.forEach(function(t){
+      var d=String(t.date).slice(0,10);
+      if(!dayMap[d])dayMap[d]={dep:0,wdr:0,cnt:0};
+      if(t.type==="DEPOSIT")dayMap[d].dep+=t.amount;
+      else dayMap[d].wdr+=t.amount;
+      dayMap[d].cnt++;
+    });
+    var days=Object.keys(dayMap).sort();
+    var rows=days.map(function(d){
+      var v=dayMap[d];
+      return [fmtDate(d), v.cnt, v.dep, v.wdr, v.dep-v.wdr];
+    });
+    var totalDep=txMonth.filter(function(t){return t.type==="DEPOSIT";}).reduce(function(a,t){return a+t.amount;},0);
+    var totalWdr=txMonth.filter(function(t){return t.type==="WITHDRAW";}).reduce(function(a,t){return a+t.amount;},0);
+    var p=month.split("-");
+    var mLabel=new Date(p[0],p[1]-1).toLocaleDateString("th-TH",{year:"numeric",month:"long"});
+    return {
+      title: "สรุปการออมรายวัน — "+clsLabel,
+      subtitle: schoolName+" | "+mLabel,
+      heads: ["วันที่","จำนวนรายการ","ยอดฝาก (บาท)","ยอดถอน (บาท)","ยอดสุทธิ (บาท)"],
+      rows: rows,
+      summary: "รวมทั้งเดือน: ฝาก ฿"+fmt(totalDep)+" | ถอน ฿"+fmt(totalWdr)+" | สุทธิ ฿"+fmt(totalDep-totalWdr),
+      filename: "สรุปรายวัน_"+clsLabel+"_"+month
+    };
+  }
+
+  if(type==="monthly"){
+    // รายเดือนทั้งหมด (ถ้าระบุปี กรองด้วย)
+    var txYear = year
+      ? txFiltered.filter(function(t){
+          var d=new Date(t.date);
+          return (d.getFullYear()+543)===year || d.getFullYear()===(year-543);
+        })
+      : txFiltered;
+    var monMap={};
+    txYear.forEach(function(t){
+      var d=new Date(t.date),k=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+      if(!monMap[k])monMap[k]={dep:0,wdr:0,cnt:0};
+      if(t.type==="DEPOSIT")monMap[k].dep+=t.amount;
+      else monMap[k].wdr+=t.amount;
+      monMap[k].cnt++;
+    });
+    var mons=Object.keys(monMap).sort();
+    var mrows=mons.map(function(k){
+      var p2=k.split("-"),label=new Date(p2[0],p2[1]-1).toLocaleDateString("th-TH",{year:"numeric",month:"long"});
+      var v=monMap[k];
+      return [label, v.cnt, v.dep, v.wdr, v.dep-v.wdr];
+    });
+    var tDep=txYear.filter(function(t){return t.type==="DEPOSIT";}).reduce(function(a,t){return a+t.amount;},0);
+    var tWdr=txYear.filter(function(t){return t.type==="WITHDRAW";}).reduce(function(a,t){return a+t.amount;},0);
+    return {
+      title: "สรุปการออมรายเดือน — "+clsLabel,
+      subtitle: schoolName+(year?" | ปีการศึกษา "+year:""),
+      heads: ["เดือน","จำนวนรายการ","ยอดฝาก (บาท)","ยอดถอน (บาท)","ยอดสุทธิ (บาท)"],
+      rows: mrows,
+      summary: "รวมทั้งหมด: ฝาก ฿"+fmt(tDep)+" | ถอน ฿"+fmt(tWdr)+" | สุทธิ ฿"+fmt(tDep-tWdr),
+      filename: "สรุปรายเดือน_"+clsLabel+(year?"_"+year:"")
+    };
+  }
+
+  if(type==="student"){
+    // รายบุคคล
+    var stuRows=students.sort(function(a,b){return CLASSES.indexOf(a.className)-CLASSES.indexOf(b.className)||(Number(a.number)||0)-(Number(b.number)||0);}).map(function(s){
+      var dep=appTx.filter(function(t){return t.studentId===s.id&&t.type==="DEPOSIT";}).reduce(function(a,t){return a+t.amount;},0);
+      var wdr=appTx.filter(function(t){return t.studentId===s.id&&t.type==="WITHDRAW";}).reduce(function(a,t){return a+t.amount;},0);
+      return [s.number, s.name, s.className, dep, wdr, dep-wdr];
+    });
+    var tDep2=stuRows.reduce(function(a,r){return a+r[3];},0);
+    var tWdr2=stuRows.reduce(function(a,r){return a+r[4];},0);
+    return {
+      title: "สรุปยอดออมรายบุคคล — "+clsLabel,
+      subtitle: schoolName,
+      heads: ["เลขที่","ชื่อ-นามสกุล","ชั้น","ยอดฝาก (บาท)","ยอดถอน (บาท)","ยอดคงเหลือ (บาท)"],
+      rows: stuRows,
+      summary: "รวม "+students.length+" คน | ฝาก ฿"+fmt(tDep2)+" | ถอน ฿"+fmt(tWdr2)+" | สุทธิ ฿"+fmt(tDep2-tWdr2),
+      filename: "สรุปรายบุคคล_"+clsLabel
+    };
+  }
+  return null;
+}
+
+function previewExport(){
+  var data=buildExportData();
+  if(!data){return;}
+  exportRows=data;
+  document.getElementById("exportPreviewTitle").textContent=data.title;
+  document.getElementById("exportPreviewHead").innerHTML='<tr>'+data.heads.map(function(h){return '<th>'+h+'</th>';}).join("")+'</tr>';
+  var bodyHtml="";
+  if(!data.rows.length)bodyHtml='<tr><td colspan="'+data.heads.length+'" class="no-data">ไม่มีข้อมูลในช่วงที่เลือก</td></tr>';
+  else data.rows.forEach(function(r){
+    bodyHtml+='<tr>'+r.map(function(v,i){
+      var isAmt=i>=2&&typeof v==="number";
+      return '<td>'+(isAmt?'<span class="money">฿'+fmt(v)+'</span>':v)+'</td>';
+    }).join("")+'</tr>';
+  });
+  document.getElementById("exportPreviewBody").innerHTML=bodyHtml;
+  document.getElementById("exportSummaryRow").textContent=data.summary;
+  document.getElementById("exportPreviewCard").style.display="block";
+  showToast("โหลดตัวอย่างสำเร็จ","success");
+}
+
+// ── Excel Export ──────────────────────────────────────────
+function doExportExcel(){
+  if(!exportRows||!exportRows.rows){showToast("กรุณากด 'แสดงตัวอย่าง' ก่อน","error");return;}
+  var d=exportRows;
+  var wsData=[[d.title],[d.subtitle],[]];
+  wsData.push(d.heads);
+  d.rows.forEach(function(r){wsData.push(r.map(function(v){return v;}));});
+  wsData.push([]);
+  wsData.push([d.summary]);
+  var ws=XLSX.utils.aoa_to_sheet(wsData);
+  // ปรับความกว้างคอลัมน์อัตโนมัติ
+  var colWidths=d.heads.map(function(h,i){
+    var maxLen=h.length;
+    d.rows.forEach(function(r){var v=String(r[i]||"");if(v.length>maxLen)maxLen=v.length;});
+    return {wch:Math.min(maxLen+4,40)};
+  });
+  ws["!cols"]=colWidths;
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"รายงาน");
+  XLSX.writeFile(wb,d.filename+".xlsx");
+  showToast("Export Excel สำเร็จ!","success");
+}
+
+// ── PDF Export ────────────────────────────────────────────
+function doExportPDF(){
+  if(!exportRows||!exportRows.rows){showToast("กรุณากด 'แสดงตัวอย่าง' ก่อน","error");return;}
+  var d=exportRows;
+  var doc=new window.jspdf.jsPDF({orientation:d.heads.length>4?"landscape":"portrait",unit:"mm",format:"a4"});
+
+  // ใช้ built-in font ที่รองรับ latin — ชื่อไทยอาจแสดงเป็น ? แต่ตัวเลขถูกต้องเสมอ
+  // ถ้าต้องการภาษาไทยสมบูรณ์ต้องฝัง Thai font ซึ่งมีขนาดใหญ่มาก
+  doc.setFont("helvetica","bold");
+  doc.setFontSize(14);
+  doc.text(d.title, 14, 18);
+  doc.setFont("helvetica","normal");
+  doc.setFontSize(10);
+  doc.setTextColor(80,80,80);
+  doc.text(d.subtitle, 14, 25);
+  doc.text("วันที่พิมพ์: "+new Date().toLocaleDateString("th-TH",{year:"numeric",month:"long",day:"numeric"}), 14, 31);
+  doc.setTextColor(0,0,0);
+
+  // สร้างข้อมูลตาราง (แปลงตัวเลขให้มี comma)
+  var bodyRows=d.rows.map(function(r){
+    return r.map(function(v,i){
+      if(i>=2&&typeof v==="number") return "฿"+fmt(v);
+      return String(v);
+    });
+  });
+
+  doc.autoTable({
+    startY: 36,
+    head: [d.heads],
+    body: bodyRows,
+    foot: [[{content:d.summary,colSpan:d.heads.length,styles:{fontStyle:"bold",fillColor:[220,252,231],textColor:[22,163,74]}}]],
+    styles:{font:"helvetica",fontSize:9,cellPadding:3},
+    headStyles:{fillColor:[14,165,233],textColor:255,fontStyle:"bold"},
+    alternateRowStyles:{fillColor:[240,249,255]},
+    footStyles:{fillColor:[220,252,231]},
+    margin:{left:14,right:14},
+    tableLineColor:[200,200,200],
+    tableLineWidth:0.1
+  });
+
+  doc.save(d.filename+".pdf");
+  showToast("Export PDF สำเร็จ!","success");
+}
+
+// ══════════════════════════════════════════════════════════
+// REPORTS
+// ══════════════════════════════════════════════════════════
+var pieChartI=null;
+function refreshReports(){renderMonthlyReport();renderTopStudents();renderPieChart();}
+function renderMonthlyReport(){
+  var cls=document.getElementById("reportClassFilter").value;
+  var clsIds=cls?appStudents.filter(function(s){return s.className===cls;}).map(function(s){return s.id;}):null;
+  var depMap={},wdrMap={},cntMap={};
+  appTx.forEach(function(t){
+    if(clsIds&&clsIds.indexOf(t.studentId)<0)return;
+    var d=new Date(t.date),k=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+    if(t.type==="DEPOSIT")depMap[k]=(depMap[k]||0)+t.amount;
+    else wdrMap[k]=(wdrMap[k]||0)+t.amount;
+    cntMap[k]=(cntMap[k]||0)+1;
+  });
+  var keys=Object.keys(Object.assign({},depMap,wdrMap)).sort().reverse();
+  document.getElementById("reportMonthlyBody").innerHTML=keys.length
+    ?keys.map(function(k){var p=k.split("-"),label=new Date(p[0],p[1]-1).toLocaleDateString("th-TH",{year:"numeric",month:"long"});var dd=depMap[k]||0,ww=wdrMap[k]||0;return '<tr><td>'+label+'</td><td><span class="money">+฿'+fmt(dd)+'</span></td><td><span class="money-neg">-฿'+fmt(ww)+'</span></td><td><span class="money">฿'+fmt(dd-ww)+'</span></td><td>'+(cntMap[k]||0)+' รายการ</td></tr>';}).join("")
+    :'<tr><td colspan="5" class="no-data">ไม่มีข้อมูล</td></tr>';
+}
+function renderTopStudents(){
+  var ranked=appStudents.filter(function(s){return s.status==="active";}).map(function(s){return {name:s.name,cls:s.className,bal:getBalance(s.id)};}).sort(function(a,b){return b.bal-a.bal;}).slice(0,10);
+  document.getElementById("topStudentsBody").innerHTML=ranked.length?ranked.map(function(s,i){return '<tr><td>'+(i===0?"🥇":i===1?"🥈":i===2?"🥉":(i+1))+'</td><td>'+s.name+'</td><td><span class="badge badge-green">'+s.cls+'</span></td><td><span class="money">฿'+fmt(s.bal)+'</span></td></tr>';}).join(""):'<tr><td colspan="4" class="no-data">ไม่มีข้อมูล</td></tr>';
+}
+function renderPieChart(){
+  var valid=CLASSES.filter(function(c){return getClassBalance(c)>0;});
+  var vals=valid.map(function(c){return getClassBalance(c);});
+  var colors=["#0ea5e9","#22c55e","#fbbf24","#f472b6","#a855f7","#06b6d4","#f97316","#84cc16","#6366f1","#14b8a6","#ef4444"];
+  if(pieChartI)pieChartI.destroy();
+  pieChartI=new Chart(document.getElementById("pieChart"),{type:"doughnut",data:{labels:valid,datasets:[{data:vals,backgroundColor:colors.slice(0,valid.length),borderWidth:2,borderColor:"#fff"}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"right",labels:{font:{family:"Sarabun",size:12}}},tooltip:{callbacks:{label:function(c){return c.label+": ฿"+fmt(c.raw);}}}}}});
+}
+
+// ══════════════════════════════════════════════════════════
+// REFRESH ALL
+// ══════════════════════════════════════════════════════════
+function refreshAll(){
+  populateSelects();
+  filterStudentsForTx("dep");
+  filterStudentsForTx("wdr");
+  renderStudentsTable();
+  renderTxTable();
+  if(document.getElementById("page-dashboard").classList.contains("active")) refreshDashboard();
+  if(document.getElementById("page-reports").classList.contains("active"))   refreshReports();
+  if(document.getElementById("page-byclass").classList.contains("active"))   renderClassGrid();
+}
+
+// ══════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════
+document.addEventListener("DOMContentLoaded",function(){
+  var today=new Date().toISOString().split("T")[0];
+  document.getElementById("depDate").value=today;
+  document.getElementById("wdrDate").value=today;
+  populateSelects();
+  populateExportSelects();
+  showLoading(true,"กำลังเริ่มต้นระบบ...");
+  google.script.run
+    .withSuccessHandler(function(){ loadAll().then(function(){refreshDashboard();}); })
+    .withFailureHandler(function(){ loadAll().then(function(){refreshDashboard();}); })
+    .initSheets();
+});
+</script>
+</body>
+</html>
