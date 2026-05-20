@@ -10,6 +10,7 @@
 <!-- jsPDF + AutoTable สำหรับ PDF export -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <!-- SheetJS สำหรับ Excel export -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -412,6 +413,8 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
           <option value="daily">สรุปรายวัน</option>
           <option value="monthly">สรุปรายเดือน</option>
           <option value="student">สรุปรายบุคคล</option>
+          <option value="studentDaily">รายละเอียดฝากรายบุคคลรายวัน</option>
+          <option value="studentMonthly">รายละเอียดฝากรายบุคคลรายเดือน</option>
         </select>
       </div>
       <div class="form-group" id="exportDateGroup">
@@ -690,8 +693,10 @@ function populateExportSelects(){
 }
 function onExportTypeChange(){
   var t=document.getElementById("exportType").value;
-  document.getElementById("exportDateGroup").style.display=t==="monthly"?"none":"";
-  document.getElementById("exportYearGroup").style.display=t==="monthly"?"":"none";
+  var usesMonth = t==="daily" || t==="studentDaily";
+  var usesYear = t==="monthly" || t==="studentMonthly";
+  document.getElementById("exportDateGroup").style.display=usesMonth?"":"none";
+  document.getElementById("exportYearGroup").style.display=usesYear?"":"none";
 }
 
 function filterStudentsForTx(prefix){
@@ -1015,6 +1020,20 @@ function buildExportData(){
 
   var schoolName = "โรงเรียนบ้านหัวหนองแวง(สามัคคีราษฎร์บำรุง)";
   var clsLabel   = cls||"ทุกชั้นเรียน";
+  var sortStudents = function(a,b){
+    return CLASSES.indexOf(a.className)-CLASSES.indexOf(b.className)||(Number(a.number)||0)-(Number(b.number)||0);
+  };
+  var getDepositTx = function(list){
+    return list.filter(function(t){return t.type==="DEPOSIT";});
+  };
+  var findStudent = function(id){
+    for(var i=0;i<students.length;i++){ if(students[i].id===id) return students[i]; }
+    return getStudentById(id);
+  };
+  var noteText = function(list){
+    var notes=list.map(function(t){return String(t.note||"").trim();}).filter(function(v){return !!v;});
+    return notes.length?notes.join(" | "):"-";
+  };
 
   if(type==="daily"){
     // รายวันในเดือนที่เลือก
@@ -1047,6 +1066,7 @@ function buildExportData(){
       heads: ["วันที่","จำนวนรายการ","ยอดฝาก (บาท)","ยอดถอน (บาท)","ยอดสุทธิ (บาท)"],
       rows: rows,
       summary: "รวมทั้งเดือน: ฝาก ฿"+fmt(totalDep)+" | ถอน ฿"+fmt(totalWdr)+" | สุทธิ ฿"+fmt(totalDep-totalWdr),
+      moneyColumns: [2,3,4],
       filename: "สรุปรายวัน_"+clsLabel+"_"+month
     };
   }
@@ -1081,13 +1101,14 @@ function buildExportData(){
       heads: ["เดือน","จำนวนรายการ","ยอดฝาก (บาท)","ยอดถอน (บาท)","ยอดสุทธิ (บาท)"],
       rows: mrows,
       summary: "รวมทั้งหมด: ฝาก ฿"+fmt(tDep)+" | ถอน ฿"+fmt(tWdr)+" | สุทธิ ฿"+fmt(tDep-tWdr),
+      moneyColumns: [2,3,4],
       filename: "สรุปรายเดือน_"+clsLabel+(year?"_"+year:"")
     };
   }
 
   if(type==="student"){
     // รายบุคคล
-    var stuRows=students.sort(function(a,b){return CLASSES.indexOf(a.className)-CLASSES.indexOf(b.className)||(Number(a.number)||0)-(Number(b.number)||0);}).map(function(s){
+    var stuRows=students.sort(sortStudents).map(function(s){
       var dep=appTx.filter(function(t){return t.studentId===s.id&&t.type==="DEPOSIT";}).reduce(function(a,t){return a+t.amount;},0);
       var wdr=appTx.filter(function(t){return t.studentId===s.id&&t.type==="WITHDRAW";}).reduce(function(a,t){return a+t.amount;},0);
       return [s.number, s.name, s.className, dep, wdr, dep-wdr];
@@ -1100,7 +1121,80 @@ function buildExportData(){
       heads: ["เลขที่","ชื่อ-นามสกุล","ชั้น","ยอดฝาก (บาท)","ยอดถอน (บาท)","ยอดคงเหลือ (บาท)"],
       rows: stuRows,
       summary: "รวม "+students.length+" คน | ฝาก ฿"+fmt(tDep2)+" | ถอน ฿"+fmt(tWdr2)+" | สุทธิ ฿"+fmt(tDep2-tWdr2),
+      moneyColumns: [3,4,5],
       filename: "สรุปรายบุคคล_"+clsLabel
+    };
+  }
+
+  if(type==="studentDaily"){
+    if(!month){showToast("กรุณาเลือกเดือน","error");return null;}
+    var depMonth=getDepositTx(txFiltered).filter(function(t){
+      var d=new Date(t.date),k=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+      return k===month;
+    });
+    var dailyMap={};
+    depMonth.forEach(function(t){
+      var key=String(t.date).slice(0,10)+"|"+t.studentId;
+      if(!dailyMap[key]) dailyMap[key]={date:String(t.date).slice(0,10),studentId:t.studentId,amount:0,count:0,items:[]};
+      dailyMap[key].amount+=Number(t.amount)||0;
+      dailyMap[key].count++;
+      dailyMap[key].items.push(t);
+    });
+    var dailyRows=Object.keys(dailyMap).sort(function(ka,kb){
+      var a=dailyMap[ka],b=dailyMap[kb],sa=findStudent(a.studentId),sb=findStudent(b.studentId);
+      return String(a.date).localeCompare(String(b.date)) || CLASSES.indexOf(sa.className)-CLASSES.indexOf(sb.className) || (Number(sa.number)||0)-(Number(sb.number)||0);
+    }).map(function(k){
+      var v=dailyMap[k],s=findStudent(v.studentId);
+      return [fmtDate(v.date), s.number||"", s.name, s.className, v.count, v.amount, noteText(v.items)];
+    });
+    var depTotal=depMonth.reduce(function(a,t){return a+(Number(t.amount)||0);},0);
+    var p3=month.split("-");
+    var monthLabel=new Date(p3[0],p3[1]-1).toLocaleDateString("th-TH",{year:"numeric",month:"long"});
+    return {
+      title: "รายละเอียดการฝากเงินรายบุคคลรายวัน — "+clsLabel,
+      subtitle: schoolName+" | "+monthLabel,
+      heads: ["วันที่","เลขที่","ชื่อ-นามสกุล","ชั้น","จำนวนครั้ง","ยอดฝาก (บาท)","หมายเหตุ"],
+      rows: dailyRows,
+      summary: "รวม "+dailyRows.length+" แถว | "+depMonth.length+" รายการฝาก | ยอดฝาก ฿"+fmt(depTotal),
+      moneyColumns: [5],
+      filename: "รายละเอียดฝากรายบุคคลรายวัน_"+clsLabel+"_"+month
+    };
+  }
+
+  if(type==="studentMonthly"){
+    var depYear = year
+      ? getDepositTx(txFiltered).filter(function(t){
+          var d=new Date(t.date);
+          return (d.getFullYear()+543)===year || d.getFullYear()===(year-543);
+        })
+      : getDepositTx(txFiltered);
+    var monthlyMap={};
+    depYear.forEach(function(t){
+      var d=new Date(t.date),mk=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+      var key=mk+"|"+t.studentId;
+      if(!monthlyMap[key]) monthlyMap[key]={month:mk,studentId:t.studentId,amount:0,count:0,lastDate:"",items:[]};
+      monthlyMap[key].amount+=Number(t.amount)||0;
+      monthlyMap[key].count++;
+      monthlyMap[key].items.push(t);
+      if(!monthlyMap[key].lastDate || new Date(t.date)>new Date(monthlyMap[key].lastDate)) monthlyMap[key].lastDate=t.date;
+    });
+    var monthlyRows=Object.keys(monthlyMap).sort(function(ka,kb){
+      var a=monthlyMap[ka],b=monthlyMap[kb],sa=findStudent(a.studentId),sb=findStudent(b.studentId);
+      return String(a.month).localeCompare(String(b.month)) || CLASSES.indexOf(sa.className)-CLASSES.indexOf(sb.className) || (Number(sa.number)||0)-(Number(sb.number)||0);
+    }).map(function(k){
+      var v=monthlyMap[k],s=findStudent(v.studentId),mp=v.month.split("-");
+      var label=new Date(mp[0],mp[1]-1).toLocaleDateString("th-TH",{year:"numeric",month:"long"});
+      return [label, s.number||"", s.name, s.className, v.count, v.amount, fmtDate(v.lastDate)];
+    });
+    var depYearTotal=depYear.reduce(function(a,t){return a+(Number(t.amount)||0);},0);
+    return {
+      title: "รายละเอียดการฝากเงินรายบุคคลรายเดือน — "+clsLabel,
+      subtitle: schoolName+(year?" | ปีการศึกษา "+year:""),
+      heads: ["เดือน","เลขที่","ชื่อ-นามสกุล","ชั้น","จำนวนครั้ง","ยอดฝาก (บาท)","ฝากล่าสุด"],
+      rows: monthlyRows,
+      summary: "รวม "+monthlyRows.length+" แถว | "+depYear.length+" รายการฝาก | ยอดฝาก ฿"+fmt(depYearTotal),
+      moneyColumns: [5],
+      filename: "รายละเอียดฝากรายบุคคลรายเดือน_"+clsLabel+(year?"_"+year:"")
     };
   }
   return null;
@@ -1116,7 +1210,7 @@ function previewExport(){
   if(!data.rows.length)bodyHtml='<tr><td colspan="'+data.heads.length+'" class="no-data">ไม่มีข้อมูลในช่วงที่เลือก</td></tr>';
   else data.rows.forEach(function(r){
     bodyHtml+='<tr>'+r.map(function(v,i){
-      var isAmt=i>=2&&typeof v==="number";
+      var isAmt=data.moneyColumns&&data.moneyColumns.indexOf(i)>=0&&typeof v==="number";
       return '<td>'+(isAmt?'<span class="money">฿'+fmt(v)+'</span>':v)+'</td>';
     }).join("")+'</tr>';
   });
@@ -1150,47 +1244,74 @@ function doExportExcel(){
 }
 
 // ── PDF Export ────────────────────────────────────────────
+function escapeHtml(v){
+  return String(v==null?"":v).replace(/[&<>"']/g,function(ch){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch];
+  });
+}
+
 function doExportPDF(){
   if(!exportRows||!exportRows.rows){showToast("กรุณากด 'แสดงตัวอย่าง' ก่อน","error");return;}
   var d=exportRows;
-  var doc=new window.jspdf.jsPDF({orientation:d.heads.length>4?"landscape":"portrait",unit:"mm",format:"a4"});
+  if(!window.html2canvas){
+    showToast("ไม่พบเครื่องมือสร้าง PDF กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่","error");
+    return;
+  }
 
-  // ใช้ built-in font ที่รองรับ latin — ชื่อไทยอาจแสดงเป็น ? แต่ตัวเลขถูกต้องเสมอ
-  // ถ้าต้องการภาษาไทยสมบูรณ์ต้องฝัง Thai font ซึ่งมีขนาดใหญ่มาก
-  doc.setFont("helvetica","bold");
-  doc.setFontSize(14);
-  doc.text(d.title, 14, 18);
-  doc.setFont("helvetica","normal");
-  doc.setFontSize(10);
-  doc.setTextColor(80,80,80);
-  doc.text(d.subtitle, 14, 25);
-  doc.text("วันที่พิมพ์: "+new Date().toLocaleDateString("th-TH",{year:"numeric",month:"long",day:"numeric"}), 14, 31);
-  doc.setTextColor(0,0,0);
+  var html='<div style="width:1120px;background:#fff;color:#0f172a;font-family:Sarabun,Arial,sans-serif;padding:28px">'
+    +'<h1 style="font-family:Prompt,Sarabun,sans-serif;font-size:24px;margin:0 0 6px">'+escapeHtml(d.title)+'</h1>'
+    +'<div style="font-size:15px;color:#475569;margin-bottom:4px">'+escapeHtml(d.subtitle)+'</div>'
+    +'<div style="font-size:13px;color:#64748b;margin-bottom:18px">วันที่พิมพ์: '+escapeHtml(new Date().toLocaleDateString("th-TH",{year:"numeric",month:"long",day:"numeric"}))+'</div>'
+    +'<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr>'
+    +d.heads.map(function(h){return '<th style="background:#0ea5e9;color:#fff;border:1px solid #bae6fd;padding:8px;text-align:left">'+escapeHtml(h)+'</th>';}).join("")
+    +'</tr></thead><tbody>'
+    +(d.rows.length?d.rows.map(function(r,idx){
+      return '<tr>'+r.map(function(v,i){
+        var isAmt=d.moneyColumns&&d.moneyColumns.indexOf(i)>=0&&typeof v==="number";
+        var text=isAmt?"฿"+fmt(v):v;
+        var bg=idx%2?'#fff':'#f0f9ff';
+        var align=isAmt?'right':'left';
+        return '<td style="background:'+bg+';border:1px solid #dbeafe;padding:7px;text-align:'+align+'">'+escapeHtml(text)+'</td>';
+      }).join("")+'</tr>';
+    }).join(""):'<tr><td colspan="'+d.heads.length+'" style="border:1px solid #dbeafe;padding:18px;text-align:center;color:#94a3b8">ไม่มีข้อมูลในช่วงที่เลือก</td></tr>')
+    +'</tbody></table>'
+    +'<div style="margin-top:14px;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:8px;padding:10px 12px;font-family:Prompt,Sarabun,sans-serif;font-weight:700">'+escapeHtml(d.summary)+'</div>'
+    +'</div>';
+  var wrap=document.createElement("div");
+  wrap.style.position="fixed";
+  wrap.style.left="-12000px";
+  wrap.style.top="0";
+  wrap.innerHTML=html;
+  document.body.appendChild(wrap);
 
-  // สร้างข้อมูลตาราง (แปลงตัวเลขให้มี comma)
-  var bodyRows=d.rows.map(function(r){
-    return r.map(function(v,i){
-      if(i>=2&&typeof v==="number") return "฿"+fmt(v);
-      return String(v);
-    });
+  showLoading(true,"กำลังสร้าง PDF...");
+  html2canvas(wrap.firstChild,{scale:2,backgroundColor:"#ffffff"}).then(function(canvas){
+    var orientation=d.heads.length>5?"landscape":"portrait";
+    var doc=new window.jspdf.jsPDF({orientation:orientation,unit:"mm",format:"a4"});
+    var pageW=doc.internal.pageSize.getWidth();
+    var pageH=doc.internal.pageSize.getHeight();
+    var margin=8;
+    var imgW=pageW-(margin*2);
+    var imgH=canvas.height*imgW/canvas.width;
+    var imgData=canvas.toDataURL("image/png");
+    var y=margin;
+    var remaining=imgH;
+    doc.addImage(imgData,"PNG",margin,y,imgW,imgH);
+    remaining-=pageH-(margin*2);
+    while(remaining>0){
+      doc.addPage();
+      y=margin-(imgH-remaining);
+      doc.addImage(imgData,"PNG",margin,y,imgW,imgH);
+      remaining-=pageH-(margin*2);
+    }
+    doc.save(d.filename+".pdf");
+    showToast("Export PDF สำเร็จ!","success");
+  }).catch(function(err){
+    showToast("Export PDF ไม่สำเร็จ: "+err.message,"error");
+  }).finally(function(){
+    document.body.removeChild(wrap);
+    showLoading(false);
   });
-
-  doc.autoTable({
-    startY: 36,
-    head: [d.heads],
-    body: bodyRows,
-    foot: [[{content:d.summary,colSpan:d.heads.length,styles:{fontStyle:"bold",fillColor:[220,252,231],textColor:[22,163,74]}}]],
-    styles:{font:"helvetica",fontSize:9,cellPadding:3},
-    headStyles:{fillColor:[14,165,233],textColor:255,fontStyle:"bold"},
-    alternateRowStyles:{fillColor:[240,249,255]},
-    footStyles:{fillColor:[220,252,231]},
-    margin:{left:14,right:14},
-    tableLineColor:[200,200,200],
-    tableLineWidth:0.1
-  });
-
-  doc.save(d.filename+".pdf");
-  showToast("Export PDF สำเร็จ!","success");
 }
 
 // ══════════════════════════════════════════════════════════
