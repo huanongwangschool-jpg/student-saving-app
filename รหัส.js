@@ -13,6 +13,9 @@ var SHEET_CONFIG      = "Config";
 var SHEET_PROMO       = "PromotionHistory";
 var SHEET_AUDIT       = "AuditLog";          // ← ใหม่ — ห้ามลบ
 var SHEET_BANK_DEPOSITS = "MonthlyBankDeposits";
+var SHEET_AUDIT_LOGS  = "AuditLogs";
+var ADMIN_EMAIL       = "huanongwangschool@gmail.com";
+var ADMIN_PASSWORD_SHA256 = "a612350f41b1944eb77c9c31078a48c7004542d2962c712ec3c08debd6547aa6";
 
 var CLASSES = ["อ.2","อ.3","ป.1","ป.2","ป.3","ป.4","ป.5","ป.6","ม.1","ม.2","ม.3"];
 var NEXT_CLASS = {
@@ -66,6 +69,67 @@ function writeAudit(action, detail, targetId) {
   }
 }
 
+function _sha256Hex(text) {
+  var raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(text), Utilities.Charset.UTF_8);
+  return raw.map(function(b){
+    var v = (b < 0 ? b + 256 : b).toString(16);
+    return v.length === 1 ? "0" + v : v;
+  }).join("");
+}
+
+function _ensureAdminProps() {
+  var props = PropertiesService.getScriptProperties();
+  if (!props.getProperty("ADMIN_EMAIL")) props.setProperty("ADMIN_EMAIL", ADMIN_EMAIL);
+  if (!props.getProperty("ADMIN_PASSWORD_SHA256")) props.setProperty("ADMIN_PASSWORD_SHA256", ADMIN_PASSWORD_SHA256);
+  return props;
+}
+
+function checkAdminLogin(dataJson) {
+  try {
+    var data = JSON.parse(dataJson || "{}");
+    var props = _ensureAdminProps();
+    var email = String(data.email || "").trim().toLowerCase();
+    var passHash = _sha256Hex(String(data.password || ""));
+    if (email !== String(props.getProperty("ADMIN_EMAIL") || "").toLowerCase() ||
+        passHash !== String(props.getProperty("ADMIN_PASSWORD_SHA256") || "")) {
+      return JSON.stringify({success:false,error:"อีเมลหรือรหัสผ่านผู้ดูแลระบบไม่ถูกต้อง"});
+    }
+    var token = Utilities.getUuid();
+    CacheService.getScriptCache().put("ADMIN_TOKEN_" + token, email, 21600);
+    writeAuditLog("ADMIN_LOGIN","AdminSession",email,"","เข้าสู่ระบบผู้ดูแลระบบ",email,"");
+    return JSON.stringify({success:true,role:"Admin",email:email,token:token});
+  } catch(e) { return JSON.stringify({success:false,error:e.message}); }
+}
+
+function _requireAdmin(token) {
+  var email = CacheService.getScriptCache().get("ADMIN_TOKEN_" + String(token || ""));
+  if (!email) throw new Error("ต้องเข้าสู่ระบบผู้ดูแลระบบก่อน");
+  return email;
+}
+
+function _auditLogHeaders() {
+  return ["logId","actionType","targetType","targetId","oldValue","newValue","editedBy","editedAt","note"];
+}
+
+function writeAuditLog(actionType, targetType, targetId, oldValue, newValue, editedBy, note) {
+  try {
+    var sh = getOrCreateSheet(SHEET_AUDIT_LOGS, _auditLogHeaders());
+    sh.appendRow([
+      "AUD" + new Date().getTime(),
+      String(actionType || ""),
+      String(targetType || ""),
+      String(targetId || ""),
+      typeof oldValue === "string" ? oldValue : JSON.stringify(oldValue || ""),
+      typeof newValue === "string" ? newValue : JSON.stringify(newValue || ""),
+      String(editedBy || _getUserEmailSafe()),
+      new Date().toISOString(),
+      String(note || "")
+    ]);
+  } catch(e) {
+    Logger.log("AuditLogs write failed: " + e.message);
+  }
+}
+
 // ── Init ──────────────────────────────────────────────────────
 function initSheets() {
   getOrCreateSheet(SHEET_STUDENTS, [
@@ -83,7 +147,10 @@ function initSheets() {
   ]);
   getOrCreateSheet(SHEET_BANK_DEPOSITS, [
     "depositId","month","year","closedAt","closedBy","totalAmount",
-    "totalTransactions","classSummaryJson","note","createdAt"
+    "totalTransactions","classSummaryJson","note","status","reversedAt","reversedBy","createdAt"
+  ]);
+  getOrCreateSheet(SHEET_AUDIT_LOGS, [
+    "logId","actionType","targetType","targetId","oldValue","newValue","editedBy","editedAt","note"
   ]);
   return JSON.stringify({ success: true });
 }
@@ -136,6 +203,10 @@ function updateStudent(dataJson) {
         sh.getRange(i+1,4).setValue(Number(data.number));
         writeAudit("EDIT_STUDENT",
           "แก้ไข: [เดิม] "+oldInfo+" → [ใหม่] "+data.name+" ("+data.className+")", data.id);
+        writeAuditLog("EDIT_STUDENT","Student",data.id,
+          {name:rows[i][1],className:rows[i][2],number:rows[i][3]},
+          {name:data.name,className:data.className,number:data.number},
+          _getUserEmailSafe(),"แก้ไขข้อมูลนักเรียน");
         return JSON.stringify({ success: true });
       }
     }
@@ -204,6 +275,8 @@ function addTransaction(dataJson) {
     var data   = JSON.parse(dataJson);
     var type   = String(data.type||"DEPOSIT");
     var amount = Number(data.amount);
+    var className = String(data.className || "");
+    var teacherName = String(data.teacherName || "");
     if (!amount||amount<=0) return JSON.stringify({success:false,error:"จำนวนเงินต้องมากกว่า 0"});
     var currentBal = _calcBalance(data.studentId);
     if (type==="WITHDRAW"&&amount>currentBal)
@@ -211,8 +284,16 @@ function addTransaction(dataJson) {
     var sh     = getOrCreateSheet(SHEET_TX);
     var id     = (type==="DEPOSIT"?"DEP":"WDR")+new Date().getTime();
     var newBal = type==="DEPOSIT" ? currentBal+amount : currentBal-amount;
+    var note = String(data.note||"");
+    if (type === "DEPOSIT") {
+      var meta = [];
+      if (className) meta.push("ชั้น: " + className);
+      if (teacherName) meta.push("ครูผู้ทำรายการ: " + teacherName);
+      if (meta.length) note = note ? note + " | " + meta.join(" | ") : meta.join(" | ");
+    }
+    var createdAt = new Date().toISOString();
     sh.appendRow([id, String(data.studentId), type, String(data.date),
-                  amount, newBal, String(data.note||""), new Date().toISOString()]);
+                  amount, newBal, note, createdAt]);
 
     // ดึงชื่อนักเรียนเพื่อ audit
     var stuSh = getOrCreateSheet(SHEET_STUDENTS), stuRows = stuSh.getDataRange().getValues();
@@ -223,6 +304,9 @@ function addTransaction(dataJson) {
     var actionLabel = type==="DEPOSIT"?"เพิ่มรายการฝาก":"เพิ่มรายการถอน";
     writeAudit("ADD_TX",
       actionLabel+": "+stuName+" จำนวน ฿"+amount.toLocaleString()+" ("+data.date+") หมายเหตุ: "+(data.note||"-"), id);
+    writeAuditLog("ADD_TX","Transaction",id,"",
+      {studentId:data.studentId,type:type,date:data.date,amount:amount,balance:newBal,className:className,teacherName:teacherName,createdAt:createdAt},
+      teacherName || _getUserEmailSafe(), actionLabel);
     return JSON.stringify({ success: true, id: id, balance: newBal });
   } catch(e) { return JSON.stringify({ success: false, error: e.message }); }
 }
@@ -263,6 +347,7 @@ function deleteTransaction(id) {
       }
     }
     writeAudit("DELETE_TX","ลบรายการธุรกรรม: "+txInfo, tid);
+    writeAuditLog("DELETE_TX","Transaction",tid,txInfo,"ลบรายการ",_getUserEmailSafe(),"ลบรายการธุรกรรม");
     return JSON.stringify({success:true});
   } catch(e) { return JSON.stringify({success:false,error:e.message}); }
 }
@@ -349,8 +434,28 @@ function getAuditLog() {
 function _bankHeaders() {
   return [
     "depositId","month","year","closedAt","closedBy","totalAmount",
-    "totalTransactions","classSummaryJson","note","createdAt"
+    "totalTransactions","classSummaryJson","note","status","reversedAt","reversedBy","createdAt"
   ];
+}
+
+function _getBankSheet() {
+  var sh = getOrCreateSheet(SHEET_BANK_DEPOSITS, _bankHeaders());
+  var headers = _bankHeaders();
+  var lastCol = sh.getLastColumn ? sh.getLastColumn() : 0;
+  if (lastCol < headers.length) {
+    sh.getRange(1,1,1,headers.length).setValues([headers]);
+  }
+  var rows = sh.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (!rows[i][0]) continue;
+    var status = String(rows[i][9] || "");
+    if (!status || status.indexOf("T") > 0 || status.indexOf("-") > 0) {
+      var oldCreatedAt = rows[i][9] ? String(rows[i][9]) : "";
+      sh.getRange(i+1,10).setValue("ACTIVE");
+      if (!rows[i][12]) sh.getRange(i+1,13).setValue(oldCreatedAt || new Date().toISOString());
+    }
+  }
+  return sh;
 }
 
 function _parseTxDate(value) {
@@ -381,10 +486,11 @@ function _getUserEmailSafe() {
 }
 
 function _monthAlreadyClosed(month, year) {
-  var sh = getOrCreateSheet(SHEET_BANK_DEPOSITS, _bankHeaders());
+  var sh = _getBankSheet();
   var rows = sh.getDataRange().getValues();
   for (var i = 1; i < rows.length; i++) {
-    if (String(rows[i][1]) === String(month) && Number(rows[i][2]) === Number(year)) {
+    var status = String(rows[i][9] || "ACTIVE");
+    if (String(rows[i][1]) === String(month) && Number(rows[i][2]) === Number(year) && status === "ACTIVE") {
       return {
         depositId: String(rows[i][0]),
         month: String(rows[i][1]),
@@ -395,7 +501,10 @@ function _monthAlreadyClosed(month, year) {
         totalTransactions: Number(rows[i][6]) || 0,
         classSummaryJson: String(rows[i][7] || "[]"),
         note: String(rows[i][8] || ""),
-        createdAt: rows[i][9] ? String(rows[i][9]) : ""
+        status: status,
+        reversedAt: rows[i][10] ? String(rows[i][10]) : "",
+        reversedBy: String(rows[i][11] || ""),
+        createdAt: rows[i][12] ? String(rows[i][12]) : ""
       };
     }
   }
@@ -464,18 +573,22 @@ function saveMonthlyBankDeposit(dataJson) {
 
     var summaryRes = JSON.parse(getMonthlyBankDepositSummary(JSON.stringify({month:month,year:year})));
     if (!summaryRes.success) return JSON.stringify(summaryRes);
-    var sh = getOrCreateSheet(SHEET_BANK_DEPOSITS, _bankHeaders());
+    var closedBy = String(data.closedBy || "").trim();
+    if (!closedBy) return JSON.stringify({success:false,error:"กรุณากรอกชื่อผู้ดำเนินการ"});
+    var sh = _getBankSheet();
     var now = new Date().toISOString();
     var id = "BANK" + new Date().getTime();
-    var closedBy = _getUserEmailSafe();
     sh.appendRow([
       id, month, year, now, closedBy, Number(summaryRes.totalAmount) || 0,
       Number(summaryRes.totalTransactions) || 0,
-      JSON.stringify(summaryRes.classSummary || []), note, now
+      JSON.stringify(summaryRes.classSummary || []), note, "ACTIVE", "", "", now
     ]);
     writeAudit("MONTHLY_BANK_DEPOSIT",
       "ปิดยอดนำฝากธนาคาร เดือน "+month+"/"+year+" จำนวน ฿"+Number(summaryRes.totalAmount||0).toLocaleString()+" รายการ "+summaryRes.totalTransactions,
       id);
+    writeAuditLog("MONTHLY_BANK_DEPOSIT","MonthlyBankDeposit",id,"",
+      {month:month,year:year,totalAmount:summaryRes.totalAmount,totalTransactions:summaryRes.totalTransactions,status:"ACTIVE"},
+      closedBy,note);
     return JSON.stringify({
       success:true,
       depositId:id,
@@ -487,6 +600,9 @@ function saveMonthlyBankDeposit(dataJson) {
       totalTransactions:summaryRes.totalTransactions,
       classSummary:summaryRes.classSummary,
       note:note,
+      status:"ACTIVE",
+      reversedAt:"",
+      reversedBy:"",
       createdAt:now
     });
   } catch(e) { return JSON.stringify({success:false,error:e.message}); }
@@ -494,7 +610,7 @@ function saveMonthlyBankDeposit(dataJson) {
 
 function getMonthlyBankDeposits() {
   try {
-    var sh = getOrCreateSheet(SHEET_BANK_DEPOSITS, _bankHeaders());
+    var sh = _getBankSheet();
     var rows = sh.getDataRange().getValues();
     var data = [];
     for (var i = 1; i < rows.length; i++) {
@@ -506,11 +622,80 @@ function getMonthlyBankDeposits() {
         closedAt:r[3]?String(r[3]):"", closedBy:String(r[4]||""),
         totalAmount:Number(r[5])||0, totalTransactions:Number(r[6])||0,
         classSummary:summary, classSummaryJson:String(r[7]||"[]"),
-        note:String(r[8]||""), createdAt:r[9]?String(r[9]):""
+        note:String(r[8]||""), status:String(r[9]||"ACTIVE"),
+        reversedAt:r[10]?String(r[10]):"", reversedBy:String(r[11]||""),
+        createdAt:r[12]?String(r[12]):""
       });
     }
     data.reverse();
     return JSON.stringify({success:true,data:data});
+  } catch(e) { return JSON.stringify({success:false,error:e.message}); }
+}
+
+function reverseMonthlyBankDeposit(dataJson) {
+  try {
+    var data = JSON.parse(dataJson || "{}");
+    var adminEmail = _requireAdmin(data.adminToken);
+    var id = String(data.depositId || "");
+    var sh = _getBankSheet();
+    var rows = sh.getDataRange().getValues();
+    for (var i = 1; i < rows.length; i++) {
+      if (String(rows[i][0]) === id) {
+        var oldStatus = String(rows[i][9] || "ACTIVE");
+        if (oldStatus === "REVERSED") return JSON.stringify({success:false,error:"รายการนี้ถูกย้อนสถานะแล้ว"});
+        var now = new Date().toISOString();
+        sh.getRange(i+1,10).setValue("REVERSED");
+        sh.getRange(i+1,11).setValue(now);
+        sh.getRange(i+1,12).setValue(adminEmail);
+        writeAudit("REVERSE_MONTHLY_BANK_DEPOSIT","ย้อนสถานะปิดยอด "+id,id);
+        writeAuditLog("REVERSE_MONTHLY_BANK_DEPOSIT","MonthlyBankDeposit",id,
+          {status:oldStatus},{status:"REVERSED",reversedAt:now,reversedBy:adminEmail},
+          adminEmail,String(data.note||"ย้อนสถานะปิดยอด"));
+        return JSON.stringify({success:true,depositId:id,status:"REVERSED",reversedAt:now,reversedBy:adminEmail});
+      }
+    }
+    return JSON.stringify({success:false,error:"ไม่พบรายการปิดยอด"});
+  } catch(e) { return JSON.stringify({success:false,error:e.message}); }
+}
+
+function getAuditLogs(dataJson) {
+  try {
+    var data = JSON.parse(dataJson || "{}");
+    _requireAdmin(data.adminToken);
+    var sh = getOrCreateSheet(SHEET_AUDIT_LOGS, _auditLogHeaders());
+    var rows = sh.getDataRange().getValues();
+    var dataRows = [];
+    for (var i=1;i<rows.length;i++) {
+      var r=rows[i]; if(!r[0]) continue;
+      dataRows.push({logId:String(r[0]),actionType:String(r[1]||""),targetType:String(r[2]||""),targetId:String(r[3]||""),oldValue:String(r[4]||""),newValue:String(r[5]||""),editedBy:String(r[6]||""),editedAt:r[7]?String(r[7]):"",note:String(r[8]||"")});
+    }
+    dataRows.reverse();
+    return JSON.stringify({success:true,data:dataRows});
+  } catch(e) { return JSON.stringify({success:false,error:e.message}); }
+}
+
+function getRealBalanceSummary() {
+  try {
+    var closed = {};
+    var bank = 0;
+    var bankRows = _getBankSheet().getDataRange().getValues();
+    for (var b=1;b<bankRows.length;b++) {
+      var br=bankRows[b]; if(!br[0]) continue;
+      var st=String(br[9]||"ACTIVE");
+      if(st!=="ACTIVE") continue;
+      var key=String(br[2])+"-"+String(br[1]).padStart(2,"0");
+      closed[key]=true;
+      bank += Number(br[5])||0;
+    }
+    var unclosed = 0, unclosedTx = 0;
+    var txRows = getOrCreateSheet(SHEET_TX).getDataRange().getValues();
+    for (var i=1;i<txRows.length;i++) {
+      var r=txRows[i]; if(!r[0] || String(r[2])!=="DEPOSIT") continue;
+      var d=_parseTxDate(r[3]); if(!d) continue;
+      var y=d.getFullYear()+543, m=String(d.getMonth()+1).padStart(2,"0");
+      if(!closed[y+"-"+m]) { unclosed += Number(r[4])||0; unclosedTx++; }
+    }
+    return JSON.stringify({success:true,unclosedAmount:unclosed,bankAmount:bank,totalAmount:unclosed+bank,unclosedTransactions:unclosedTx});
   } catch(e) { return JSON.stringify({success:false,error:e.message}); }
 }
 
