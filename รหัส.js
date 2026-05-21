@@ -428,6 +428,10 @@ function getAuditLog() {
   } catch(e) { return JSON.stringify({success:false,error:e.message}); }
 }
 
+function getFinancialSummary() {
+  return getRealBalanceSummary();
+}
+
 // ════════════════════════════════════════════════════════════
 // MONTHLY BANK DEPOSITS — ปิดยอดสิ้นเดือนเพื่อนำเงินเข้าธนาคาร
 // ════════════════════════════════════════════════════════════

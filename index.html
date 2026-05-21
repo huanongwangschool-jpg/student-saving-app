@@ -364,6 +364,11 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
 <!-- ══════════ BY CLASS ══════════ -->
 <section class="page" id="page-byclass">
   <div class="sec-title"><i class="fa-solid fa-layer-group"></i>ข้อมูลแยกตามชั้นเรียน</div>
+  <div class="summary-strip">
+    <div class="summary-box"><div class="label">เงินคงเหลือที่ยังไม่ได้ปิดยอด</div><div class="value money" id="classUnclosedCash">-</div></div>
+    <div class="summary-box"><div class="label">เงินฝากในธนาคาร</div><div class="value money" id="classBankCash">-</div></div>
+    <div class="summary-box"><div class="label">ยอดเงินทั้งหมด</div><div class="value money" id="classRealTotalCash">-</div></div>
+  </div>
   <div class="class-grid" id="classSelectGrid"></div>
   <div class="card" id="classDetailCard" style="display:none">
     <div class="card-title"><i class="fa-solid fa-users"></i><span id="classDetailTitle">ชั้น -</span></div>
@@ -408,6 +413,11 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
 <!-- ══════════ EXPORT ══════════ -->
 <section class="page" id="page-export">
   <div class="sec-title"><i class="fa-solid fa-file-export"></i>Export รายงาน</div>
+  <div class="summary-strip">
+    <div class="summary-box"><div class="label">เงินคงเหลือที่ยังไม่ได้ปิดยอด</div><div class="value money" id="exportUnclosedCash">-</div></div>
+    <div class="summary-box"><div class="label">เงินฝากในธนาคาร</div><div class="value money" id="exportBankCash">-</div></div>
+    <div class="summary-box"><div class="label">ยอดเงินทั้งหมด</div><div class="value money" id="exportRealTotalCash">-</div></div>
+  </div>
 
   <!-- ตัวเลือกการ Export -->
   <div class="card">
@@ -452,6 +462,9 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-green btn-sm" onclick="doExportExcel()">
           <i class="fa-solid fa-file-excel"></i>Export Excel (.xlsx)
+        </button>
+        <button class="btn btn-teal btn-sm" onclick="doExportCSV()">
+          <i class="fa-solid fa-file-csv"></i>Export CSV
         </button>
         <button class="btn btn-red btn-sm" onclick="doExportPDF()">
           <i class="fa-solid fa-file-pdf"></i>Export PDF
@@ -604,8 +617,13 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
 <section class="page" id="page-reports">
   <div class="sec-title"><i class="fa-solid fa-chart-line"></i>รายงานสรุป</div>
   <div class="subnav-row">
-    <button class="btn btn-primary btn-sm" onclick="switchPage('export')"><i class="fa-solid fa-file-export"></i>รายงาน Export PDF/Excel</button>
+    <button class="btn btn-primary btn-sm" onclick="switchPage('export')"><i class="fa-solid fa-file-export"></i>รายงาน Export PDF/Excel/CSV</button>
     <button class="btn btn-teal btn-sm" onclick="switchPage('byclass')"><i class="fa-solid fa-layer-group"></i>รายงานแยกชั้น</button>
+  </div>
+  <div class="summary-strip">
+    <div class="summary-box"><div class="label">เงินคงเหลือที่ยังไม่ได้ปิดยอด</div><div class="value money" id="reportUnclosedCash">-</div></div>
+    <div class="summary-box"><div class="label">เงินฝากในธนาคาร</div><div class="value money" id="reportBankCash">-</div></div>
+    <div class="summary-box"><div class="label">ยอดเงินทั้งหมด</div><div class="value money" id="reportRealTotalCash">-</div></div>
   </div>
   <div class="card">
     <div class="card-title"><i class="fa-solid fa-calendar-days"></i>สรุปยอดรายเดือน</div>
@@ -755,6 +773,7 @@ var appAudit    = [];
 var appBankDeposits = [];
 var bankCloseData = null;
 var exportRows  = [];  // เก็บ data แถวที่ preview ไว้ export
+var appFinancialSummary = {unclosedAmount:0,bankAmount:0,totalAmount:0};
 var teacherContext = {className:"",teacherName:""};
 var adminSession = {isAdmin:false,email:"",token:""};
 
@@ -939,11 +958,11 @@ function switchPage(name,btn){
   document.getElementById("page-"+name).classList.add("active");
   if(btn) btn.classList.add("active");
   if(name==="dashboard")  refreshDashboard();
-  if(name==="reports")    refreshReports();
-  if(name==="byclass")    renderClassGrid();
+  if(name==="reports")    {refreshReports();refreshRealBalanceCards();}
+  if(name==="byclass")    {renderClassGrid();refreshRealBalanceCards();}
   if(name==="promote")    {loadPromoYearDefault();renderPromoHistory();}
   if(name==="audit")      loadAuditLog();
-  if(name==="export")     populateExportSelects();
+  if(name==="export")     {populateExportSelects();refreshRealBalanceCards();}
   if(name==="monthclose") {initBankCloseDefaults();previewBankClose();loadBankCloseHistory();}
   if(name==="settings")   refreshSettings();
 }
@@ -1023,10 +1042,21 @@ function refreshDashboard(){
 }
 
 function refreshRealBalanceCards(){
-  gasCall("getRealBalanceSummary")
+  gasCall("getFinancialSummary")
     .then(function(r){
       if(!r.success)return;
-      [["unclosedCash",r.unclosedAmount],["bankCash",r.bankAmount],["realTotalCash",r.totalAmount],["bankUnclosedCash",r.unclosedAmount],["bankDepositedCash",r.bankAmount],["bankRealTotalCash",r.totalAmount]].forEach(function(pair){
+      appFinancialSummary = {
+        unclosedAmount:Number(r.unclosedAmount)||0,
+        bankAmount:Number(r.bankAmount)||0,
+        totalAmount:Number(r.totalAmount)||0
+      };
+      [
+        ["unclosedCash",r.unclosedAmount],["bankCash",r.bankAmount],["realTotalCash",r.totalAmount],
+        ["bankUnclosedCash",r.unclosedAmount],["bankDepositedCash",r.bankAmount],["bankRealTotalCash",r.totalAmount],
+        ["reportUnclosedCash",r.unclosedAmount],["reportBankCash",r.bankAmount],["reportRealTotalCash",r.totalAmount],
+        ["exportUnclosedCash",r.unclosedAmount],["exportBankCash",r.bankAmount],["exportRealTotalCash",r.totalAmount],
+        ["classUnclosedCash",r.unclosedAmount],["classBankCash",r.bankAmount],["classRealTotalCash",r.totalAmount]
+      ].forEach(function(pair){
         var el=document.getElementById(pair[0]); if(el)el.textContent="฿"+fmt(pair[1]||0);
       });
     })
@@ -1551,7 +1581,12 @@ function previewExport(){
 function doExportExcel(){
   if(!exportRows||!exportRows.rows){showToast("กรุณากด 'แสดงตัวอย่าง' ก่อน","error");return;}
   var d=exportRows;
-  var wsData=[[d.title],[d.subtitle],[]];
+  var fs=appFinancialSummary||{};
+  var wsData=[["โรงเรียนบ้านหัวหนองแวง(สามัคคีราษฎร์บำรุง)"],[d.title],[d.subtitle],["วันที่พิมพ์",new Date().toLocaleDateString("th-TH",{year:"numeric",month:"long",day:"numeric"})],[]];
+  wsData.push(["เงินคงเหลือที่ยังไม่ได้ปิดยอด",Number(fs.unclosedAmount)||0]);
+  wsData.push(["เงินฝากในธนาคาร",Number(fs.bankAmount)||0]);
+  wsData.push(["ยอดเงินทั้งหมด",Number(fs.totalAmount)||0]);
+  wsData.push([]);
   wsData.push(d.heads);
   d.rows.forEach(function(r){wsData.push(r.map(function(v){return v;}));});
   wsData.push([]);
@@ -1570,11 +1605,58 @@ function doExportExcel(){
   showToast("Export Excel สำเร็จ!","success");
 }
 
+function doExportCSV(){
+  if(!exportRows||!exportRows.rows){showToast("กรุณากด 'แสดงตัวอย่าง' ก่อน","error");return;}
+  var d=exportRows, fs=appFinancialSummary||{};
+  var csvData=[
+    ["โรงเรียนบ้านหัวหนองแวง(สามัคคีราษฎร์บำรุง)"],
+    [d.title],
+    [d.subtitle],
+    ["วันที่พิมพ์",new Date().toLocaleDateString("th-TH",{year:"numeric",month:"long",day:"numeric"})],
+    [],
+    ["เงินคงเหลือที่ยังไม่ได้ปิดยอด",Number(fs.unclosedAmount)||0],
+    ["เงินฝากในธนาคาร",Number(fs.bankAmount)||0],
+    ["ยอดเงินทั้งหมด",Number(fs.totalAmount)||0],
+    [],
+    d.heads
+  ];
+  d.rows.forEach(function(r){csvData.push(r);});
+  csvData.push([]);
+  csvData.push([d.summary]);
+  var ws=XLSX.utils.aoa_to_sheet(csvData);
+  var csv=XLSX.utils.sheet_to_csv(ws);
+  var blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+  var link=document.createElement("a");
+  link.href=URL.createObjectURL(blob);
+  link.download=d.filename+".csv";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  showToast("Export CSV สำเร็จ!","success");
+}
+
 // ── PDF Export ────────────────────────────────────────────
 function escapeHtml(v){
   return String(v==null?"":v).replace(/[&<>"']/g,function(ch){
     return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch];
   });
+}
+
+function financialSummaryPdfHtml(){
+  var fs=appFinancialSummary||{};
+  var items=[
+    ["เงินคงเหลือที่ยังไม่ได้ปิดยอด",Number(fs.unclosedAmount)||0],
+    ["เงินฝากในธนาคาร",Number(fs.bankAmount)||0],
+    ["ยอดเงินทั้งหมด",Number(fs.totalAmount)||0]
+  ];
+  return '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0 16px">'
+    +items.map(function(it){
+      return '<div style="border:1px solid #bae6fd;border-radius:8px;background:#f0f9ff;padding:10px 12px">'
+        +'<div style="font-size:12px;color:#475569;margin-bottom:4px">'+escapeHtml(it[0])+'</div>'
+        +'<div style="font-family:Prompt,Sarabun,sans-serif;font-size:18px;font-weight:800;color:#0f766e">฿'+fmt(it[1])+'</div>'
+        +'</div>';
+    }).join("")
+    +'</div>';
 }
 
 function doExportPDF(){
@@ -1585,12 +1667,19 @@ function doExportPDF(){
     return;
   }
 
-  var html='<div style="width:1120px;background:#fff;color:#0f172a;font-family:Sarabun,Arial,sans-serif;padding:28px">'
-    +'<h1 style="font-family:Prompt,Sarabun,sans-serif;font-size:24px;margin:0 0 6px">'+escapeHtml(d.title)+'</h1>'
-    +'<div style="font-size:15px;color:#475569;margin-bottom:4px">'+escapeHtml(d.subtitle)+'</div>'
-    +'<div style="font-size:13px;color:#64748b;margin-bottom:18px">วันที่พิมพ์: '+escapeHtml(new Date().toLocaleDateString("th-TH",{year:"numeric",month:"long",day:"numeric"}))+'</div>'
-    +'<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr>'
-    +d.heads.map(function(h){return '<th style="background:#0ea5e9;color:#fff;border:1px solid #bae6fd;padding:8px;text-align:left">'+escapeHtml(h)+'</th>';}).join("")
+  var printDate=new Date().toLocaleDateString("th-TH",{year:"numeric",month:"long",day:"numeric"});
+  var html='<div style="width:900px;background:#fff;color:#0f172a;font-family:Sarabun,Arial,sans-serif;padding:26px">'
+    +'<div style="text-align:center;border-bottom:2px solid #0ea5e9;padding-bottom:12px;margin-bottom:14px">'
+    +'<h1 style="font-family:Prompt,Sarabun,sans-serif;font-size:22px;margin:0;color:#075985">โรงเรียนบ้านหัวหนองแวง(สามัคคีราษฎร์บำรุง)</h1>'
+    +'<h2 style="font-family:Prompt,Sarabun,sans-serif;font-size:18px;margin:8px 0 0;color:#0f172a">'+escapeHtml(d.title)+'</h2>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;font-size:13px;color:#475569;margin-bottom:8px">'
+    +'<div><strong>ช่วงข้อมูล:</strong> '+escapeHtml(d.subtitle||"-")+'</div>'
+    +'<div><strong>วันที่พิมพ์รายงาน:</strong> '+escapeHtml(printDate)+'</div>'
+    +'</div>'
+    +financialSummaryPdfHtml()
+    +'<table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:auto"><thead><tr>'
+    +d.heads.map(function(h){return '<th style="background:#0ea5e9;color:#fff;border:1px solid #bae6fd;padding:7px;text-align:left;white-space:normal">'+escapeHtml(h)+'</th>';}).join("")
     +'</tr></thead><tbody>'
     +(d.rows.length?d.rows.map(function(r,idx){
       return '<tr>'+r.map(function(v,i){
@@ -1600,11 +1689,15 @@ function doExportPDF(){
         var align=isAmt?'right':'left';
         var color=isAmt?getExportMoneyColor(d,i):'#0f172a';
         var weight=isAmt?'700':'400';
-        return '<td style="background:'+bg+';border:1px solid #dbeafe;padding:7px;text-align:'+align+';color:'+color+';font-weight:'+weight+'">'+escapeHtml(text)+'</td>';
+        return '<td style="background:'+bg+';border:1px solid #dbeafe;padding:6px;text-align:'+align+';color:'+color+';font-weight:'+weight+';white-space:normal;word-break:break-word">'+escapeHtml(text)+'</td>';
       }).join("")+'</tr>';
     }).join(""):'<tr><td colspan="'+d.heads.length+'" style="border:1px solid #dbeafe;padding:18px;text-align:center;color:#94a3b8">ไม่มีข้อมูลในช่วงที่เลือก</td></tr>')
     +'</tbody></table>'
     +'<div style="margin-top:14px;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:8px;padding:10px 12px;font-family:Prompt,Sarabun,sans-serif;font-weight:700">'+escapeHtml(d.summary)+'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:36px;margin-top:46px;font-size:13px;color:#0f172a;text-align:center">'
+    +'<div><div style="border-top:1px solid #334155;padding-top:8px">ลงชื่อผู้จัดทำรายงาน</div><div style="margin-top:4px">(................................................)</div></div>'
+    +'<div><div style="border-top:1px solid #334155;padding-top:8px">ลงชื่อผู้ตรวจสอบ</div><div style="margin-top:4px">(................................................)</div></div>'
+    +'</div>'
     +'</div>';
   var wrap=document.createElement("div");
   wrap.style.position="fixed";
@@ -1615,8 +1708,7 @@ function doExportPDF(){
 
   showLoading(true,"กำลังสร้าง PDF...");
   html2canvas(wrap.firstChild,{scale:2,backgroundColor:"#ffffff"}).then(function(canvas){
-    var orientation=d.heads.length>5?"landscape":"portrait";
-    var doc=new window.jspdf.jsPDF({orientation:orientation,unit:"mm",format:"a4"});
+    var doc=new window.jspdf.jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
     var pageW=doc.internal.pageSize.getWidth();
     var pageH=doc.internal.pageSize.getHeight();
     var margin=8;
@@ -1801,7 +1893,8 @@ function bankExportRows(){
 function exportBankCloseExcel(){
   var d=bankExportRows(); if(!d)return;
   var closedBy=document.getElementById("bankClosedByInput").value.trim()||bankCloseData.closedBy||"-";
-  var wsData=[[d.title],[d.subtitle],["วันที่ปิดยอด",fmtDateTime(bankCloseData.closedAt||new Date().toISOString())],["ผู้ดำเนินการ",closedBy],["หมายเหตุ",document.getElementById("bankCloseNote").value.trim()||bankCloseData.note||"-"],[],d.heads];
+  var fs=appFinancialSummary||{};
+  var wsData=[[d.title],[d.subtitle],["วันที่ปิดยอด",fmtDateTime(bankCloseData.closedAt||new Date().toISOString())],["ผู้ดำเนินการ",closedBy],["หมายเหตุ",document.getElementById("bankCloseNote").value.trim()||bankCloseData.note||"-"],[],["เงินคงเหลือที่ยังไม่ได้ปิดยอด",Number(fs.unclosedAmount)||0],["เงินฝากในธนาคาร",Number(fs.bankAmount)||0],["ยอดเงินทั้งหมด",Number(fs.totalAmount)||0],[],d.heads];
   d.rows.forEach(function(r){wsData.push(r);});
   wsData.push([],[d.summary]);
   var ws=XLSX.utils.aoa_to_sheet(wsData),wb=XLSX.utils.book_new();
@@ -1812,7 +1905,18 @@ function exportBankCloseExcel(){
 
 function exportBankCloseCSV(){
   var d=bankExportRows(); if(!d)return;
-  var ws=XLSX.utils.aoa_to_sheet([d.heads].concat(d.rows).concat([[],[d.summary]]));
+  var fs=appFinancialSummary||{};
+  var rows=[
+    [d.title],
+    [d.subtitle],
+    [],
+    ["เงินคงเหลือที่ยังไม่ได้ปิดยอด",Number(fs.unclosedAmount)||0],
+    ["เงินฝากในธนาคาร",Number(fs.bankAmount)||0],
+    ["ยอดเงินทั้งหมด",Number(fs.totalAmount)||0],
+    [],
+    d.heads
+  ].concat(d.rows).concat([[],[d.summary]]);
+  var ws=XLSX.utils.aoa_to_sheet(rows);
   var csv=XLSX.utils.sheet_to_csv(ws);
   var blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8;"});
   var a=document.createElement("a");
