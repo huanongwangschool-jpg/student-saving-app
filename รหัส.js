@@ -12,6 +12,7 @@ var SHEET_TX          = "Transactions";
 var SHEET_CONFIG      = "Config";
 var SHEET_PROMO       = "PromotionHistory";
 var SHEET_AUDIT       = "AuditLog";          // ← ใหม่ — ห้ามลบ
+var SHEET_BANK_DEPOSITS = "MonthlyBankDeposits";
 
 var CLASSES = ["อ.2","อ.3","ป.1","ป.2","ป.3","ป.4","ป.5","ป.6","ม.1","ม.2","ม.3"];
 var NEXT_CLASS = {
@@ -79,6 +80,10 @@ function initSheets() {
   ]);
   getOrCreateSheet(SHEET_AUDIT, [
     "LogID","Timestamp","Action","Detail","TargetID","UserEmail"
+  ]);
+  getOrCreateSheet(SHEET_BANK_DEPOSITS, [
+    "depositId","month","year","closedAt","closedBy","totalAmount",
+    "totalTransactions","classSummaryJson","note","createdAt"
   ]);
   return JSON.stringify({ success: true });
 }
@@ -333,6 +338,177 @@ function getAuditLog() {
       });
     }
     // คืนเรียงล่าสุดก่อน
+    data.reverse();
+    return JSON.stringify({success:true,data:data});
+  } catch(e) { return JSON.stringify({success:false,error:e.message}); }
+}
+
+// ════════════════════════════════════════════════════════════
+// MONTHLY BANK DEPOSITS — ปิดยอดสิ้นเดือนเพื่อนำเงินเข้าธนาคาร
+// ════════════════════════════════════════════════════════════
+function _bankHeaders() {
+  return [
+    "depositId","month","year","closedAt","closedBy","totalAmount",
+    "totalTransactions","classSummaryJson","note","createdAt"
+  ];
+}
+
+function _parseTxDate(value) {
+  if (Object.prototype.toString.call(value) === "[object Date]" && !isNaN(value)) {
+    return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+  }
+  var s = String(value || "").trim();
+  if (!s) return null;
+  var m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) {
+    var y = Number(m[1]);
+    if (y > 2400) y -= 543;
+    return new Date(y, Number(m[2]) - 1, Number(m[3]));
+  }
+  m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if (m) {
+    var y2 = Number(m[3]);
+    if (y2 < 100) y2 += 2000;
+    if (y2 > 2400) y2 -= 543;
+    return new Date(y2, Number(m[2]) - 1, Number(m[1]));
+  }
+  var d = new Date(s);
+  return isNaN(d) ? null : new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function _getUserEmailSafe() {
+  try { return Session.getEffectiveUser().getEmail() || ""; } catch(e) { return ""; }
+}
+
+function _monthAlreadyClosed(month, year) {
+  var sh = getOrCreateSheet(SHEET_BANK_DEPOSITS, _bankHeaders());
+  var rows = sh.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][1]) === String(month) && Number(rows[i][2]) === Number(year)) {
+      return {
+        depositId: String(rows[i][0]),
+        month: String(rows[i][1]),
+        year: Number(rows[i][2]) || 0,
+        closedAt: rows[i][3] ? String(rows[i][3]) : "",
+        closedBy: String(rows[i][4] || ""),
+        totalAmount: Number(rows[i][5]) || 0,
+        totalTransactions: Number(rows[i][6]) || 0,
+        classSummaryJson: String(rows[i][7] || "[]"),
+        note: String(rows[i][8] || ""),
+        createdAt: rows[i][9] ? String(rows[i][9]) : ""
+      };
+    }
+  }
+  return null;
+}
+
+function getMonthlyBankDepositSummary(dataJson) {
+  try {
+    var data = JSON.parse(dataJson || "{}");
+    var month = String(data.month || "").padStart(2, "0");
+    var year = Number(data.year) || (new Date().getFullYear() + 543);
+    if (!month || month === "00") return JSON.stringify({success:false,error:"กรุณาเลือกเดือน"});
+
+    var closed = _monthAlreadyClosed(month, year);
+    var gregYear = year > 2400 ? year - 543 : year;
+    var stuRows = getOrCreateSheet(SHEET_STUDENTS).getDataRange().getValues();
+    var studentClass = {};
+    for (var s = 1; s < stuRows.length; s++) {
+      if (stuRows[s][0]) studentClass[String(stuRows[s][0])] = String(stuRows[s][2] || "");
+    }
+
+    var txRows = getOrCreateSheet(SHEET_TX).getDataRange().getValues();
+    var classMap = {}, total = 0, count = 0;
+    for (var i = 1; i < txRows.length; i++) {
+      var r = txRows[i];
+      if (!r[0] || String(r[2]) !== "DEPOSIT") continue;
+      var d = _parseTxDate(r[3]);
+      if (!d) continue;
+      if (d.getFullYear() !== gregYear || d.getMonth() + 1 !== Number(month)) continue;
+      var amt = Number(r[4]) || 0;
+      var cls = studentClass[String(r[1])] || "ไม่ระบุชั้น";
+      if (!classMap[cls]) classMap[cls] = {className:cls,totalAmount:0,totalTransactions:0};
+      classMap[cls].totalAmount += amt;
+      classMap[cls].totalTransactions++;
+      total += amt;
+      count++;
+    }
+    var summary = [];
+    for (var c in classMap) summary.push(classMap[c]);
+    summary.sort(function(a,b){ return CLASSES.indexOf(a.className) - CLASSES.indexOf(b.className); });
+
+    return JSON.stringify({
+      success:true,
+      month:month,
+      year:year,
+      closed:!!closed,
+      existing:closed,
+      closedAt:new Date().toISOString(),
+      closedBy:_getUserEmailSafe(),
+      totalAmount:total,
+      totalTransactions:count,
+      classSummary:summary
+    });
+  } catch(e) { return JSON.stringify({success:false,error:e.message}); }
+}
+
+function saveMonthlyBankDeposit(dataJson) {
+  try {
+    var data = JSON.parse(dataJson || "{}");
+    var month = String(data.month || "").padStart(2, "0");
+    var year = Number(data.year) || (new Date().getFullYear() + 543);
+    var note = String(data.note || "");
+    if (!month || month === "00") return JSON.stringify({success:false,error:"กรุณาเลือกเดือน"});
+    var closed = _monthAlreadyClosed(month, year);
+    if (closed) return JSON.stringify({success:false,duplicate:true,error:"เดือนนี้ถูกปิดยอดแล้ว",existing:closed});
+
+    var summaryRes = JSON.parse(getMonthlyBankDepositSummary(JSON.stringify({month:month,year:year})));
+    if (!summaryRes.success) return JSON.stringify(summaryRes);
+    var sh = getOrCreateSheet(SHEET_BANK_DEPOSITS, _bankHeaders());
+    var now = new Date().toISOString();
+    var id = "BANK" + new Date().getTime();
+    var closedBy = _getUserEmailSafe();
+    sh.appendRow([
+      id, month, year, now, closedBy, Number(summaryRes.totalAmount) || 0,
+      Number(summaryRes.totalTransactions) || 0,
+      JSON.stringify(summaryRes.classSummary || []), note, now
+    ]);
+    writeAudit("MONTHLY_BANK_DEPOSIT",
+      "ปิดยอดนำฝากธนาคาร เดือน "+month+"/"+year+" จำนวน ฿"+Number(summaryRes.totalAmount||0).toLocaleString()+" รายการ "+summaryRes.totalTransactions,
+      id);
+    return JSON.stringify({
+      success:true,
+      depositId:id,
+      month:month,
+      year:year,
+      closedAt:now,
+      closedBy:closedBy,
+      totalAmount:summaryRes.totalAmount,
+      totalTransactions:summaryRes.totalTransactions,
+      classSummary:summaryRes.classSummary,
+      note:note,
+      createdAt:now
+    });
+  } catch(e) { return JSON.stringify({success:false,error:e.message}); }
+}
+
+function getMonthlyBankDeposits() {
+  try {
+    var sh = getOrCreateSheet(SHEET_BANK_DEPOSITS, _bankHeaders());
+    var rows = sh.getDataRange().getValues();
+    var data = [];
+    for (var i = 1; i < rows.length; i++) {
+      var r = rows[i]; if (!r[0]) continue;
+      var summary = [];
+      try { summary = JSON.parse(String(r[7] || "[]")); } catch(e) {}
+      data.push({
+        depositId:String(r[0]), month:String(r[1]), year:Number(r[2])||0,
+        closedAt:r[3]?String(r[3]):"", closedBy:String(r[4]||""),
+        totalAmount:Number(r[5])||0, totalTransactions:Number(r[6])||0,
+        classSummary:summary, classSummaryJson:String(r[7]||"[]"),
+        note:String(r[8]||""), createdAt:r[9]?String(r[9]):""
+      });
+    }
     data.reverse();
     return JSON.stringify({success:true,data:data});
   } catch(e) { return JSON.stringify({success:false,error:e.message}); }

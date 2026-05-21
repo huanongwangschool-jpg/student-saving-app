@@ -213,6 +213,12 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
 .export-panel-title{font-family:'Prompt',sans-serif;font-weight:700;font-size:14px;margin-bottom:12px;display:flex;align-items:center;gap:7px;color:var(--text)}
 .export-panel-title i{color:var(--sky)}
 .export-btn-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.subnav-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.summary-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:12px 0}
+.summary-box{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px}
+.summary-box .label{font-size:12px;color:var(--text-s);font-weight:600}
+.summary-box .value{font-family:'Prompt',sans-serif;font-size:18px;font-weight:800;color:var(--text);margin-top:2px}
+.bank-slip{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:16px}
 
 @media(max-width:640px){.stats-grid{grid-template-columns:repeat(2,1fr)}.stat-value{font-size:16px}.logo{font-size:14px}}
 </style>
@@ -235,14 +241,11 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
 
 <nav class="nav-wrap">
   <div class="nav-inner">
-    <button class="nav-btn active" onclick="switchPage('dashboard',this)"><i class="fa-solid fa-gauge-high"></i>ภาพรวม</button>
-    <button class="nav-btn" onclick="switchPage('students',this)"><i class="fa-solid fa-users"></i>นักเรียน</button>
-    <button class="nav-btn" onclick="switchPage('transactions',this)"><i class="fa-solid fa-coins"></i>ฝาก-ถอน</button>
-    <button class="nav-btn" onclick="switchPage('byclass',this)"><i class="fa-solid fa-layer-group"></i>แยกชั้น</button>
-    <button class="nav-btn" onclick="switchPage('promote',this)"><i class="fa-solid fa-graduation-cap"></i>เลื่อนชั้น</button>
-    <button class="nav-btn" onclick="switchPage('export',this)"><i class="fa-solid fa-file-export"></i>Export</button>
-    <button class="nav-btn" onclick="switchPage('audit',this)"><i class="fa-solid fa-shield-halved"></i>ประวัติการแก้ไข</button>
+    <button class="nav-btn active" onclick="switchPage('dashboard',this)"><i class="fa-solid fa-gauge-high"></i>Dashboard</button>
+    <button class="nav-btn" onclick="switchPage('transactions',this)"><i class="fa-solid fa-coins"></i>ฝากเงิน</button>
     <button class="nav-btn" onclick="switchPage('reports',this)"><i class="fa-solid fa-chart-line"></i>รายงาน</button>
+    <button class="nav-btn" onclick="switchPage('monthclose',this)"><i class="fa-solid fa-building-columns"></i>ปิดยอดสิ้นเดือน</button>
+    <button class="nav-btn" onclick="switchPage('settings',this)"><i class="fa-solid fa-gear"></i>ตั้งค่า</button>
   </div>
 </nav>
 
@@ -453,6 +456,81 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
   </div>
 </section>
 
+<!-- ══════════ MONTHLY BANK DEPOSIT CLOSE ══════════ -->
+<section class="page" id="page-monthclose">
+  <div class="sec-title"><i class="fa-solid fa-building-columns"></i>ปิดยอดเงินฝากสิ้นเดือนเพื่อนำเงินเข้าธนาคาร</div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title"><i class="fa-solid fa-calendar-check"></i>เลือกเดือนที่ต้องการปิดยอด</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>เดือน</label>
+          <select id="bankCloseMonth">
+            <option value="01">มกราคม</option><option value="02">กุมภาพันธ์</option><option value="03">มีนาคม</option>
+            <option value="04">เมษายน</option><option value="05">พฤษภาคม</option><option value="06">มิถุนายน</option>
+            <option value="07">กรกฎาคม</option><option value="08">สิงหาคม</option><option value="09">กันยายน</option>
+            <option value="10">ตุลาคม</option><option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>ปี พ.ศ.</label>
+          <input type="number" id="bankCloseYear" min="2560" max="2600">
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:12px">
+        <label>หมายเหตุ</label>
+        <textarea id="bankCloseNote" placeholder="เช่น นำฝากธนาคารวันที่ 31 พ.ค. 2569"></textarea>
+      </div>
+      <div class="action-row">
+        <button class="btn btn-primary" onclick="previewBankClose()"><i class="fa-solid fa-eye"></i>สรุปยอด</button>
+        <button class="btn btn-green" onclick="saveBankClose()"><i class="fa-solid fa-building-columns"></i>บันทึกการนำฝากเข้าธนาคาร</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="fa-solid fa-circle-info"></i>สถานะการปิดยอด</div>
+      <div id="bankCloseStatus" class="info-box"><i class="fa-solid fa-calendar-days"></i><div>เลือกเดือนและกด “สรุปยอด” เพื่อตรวจสอบก่อนบันทึก</div></div>
+      <div class="summary-strip">
+        <div class="summary-box"><div class="label">ยอดฝากรวม</div><div class="value money" id="bankTotalAmount">-</div></div>
+        <div class="summary-box"><div class="label">จำนวนรายการฝาก</div><div class="value" id="bankTotalTx">-</div></div>
+        <div class="summary-box"><div class="label">วันที่ปิดยอด</div><div class="value" id="bankClosedAt">-</div></div>
+        <div class="summary-box"><div class="label">ผู้ดำเนินการ</div><div class="value" id="bankClosedBy" style="font-size:13px">-</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="bankPreviewCard" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+      <div class="card-title" style="margin-bottom:0"><i class="fa-solid fa-list-check"></i>ใบนำฝากธนาคาร</div>
+      <div class="action-row">
+        <button class="btn btn-green btn-sm" onclick="exportBankCloseExcel()"><i class="fa-solid fa-file-excel"></i>Export Excel</button>
+        <button class="btn btn-teal btn-sm" onclick="exportBankCloseCSV()"><i class="fa-solid fa-file-csv"></i>Export CSV</button>
+        <button class="btn btn-red btn-sm" onclick="exportBankClosePDF()"><i class="fa-solid fa-file-pdf"></i>Export PDF</button>
+      </div>
+    </div>
+    <div class="bank-slip" id="bankSlipPrintable">
+      <h3 style="font-family:Prompt,Sarabun,sans-serif;margin-bottom:6px">ใบนำฝากเงินออมทรัพย์นักเรียนเข้าธนาคาร</h3>
+      <div id="bankSlipMeta" style="font-size:13px;color:var(--text-m);margin-bottom:12px"></div>
+      <div class="table-wrap"><table><thead><tr><th>ชั้นเรียน</th><th>จำนวนรายการฝาก</th><th>ยอดฝากรวม (บาท)</th></tr></thead><tbody id="bankClassSummaryBody"></tbody></table></div>
+      <div id="bankSlipSummary" style="margin-top:10px;padding:10px 14px;background:var(--green-l);border-radius:9px;font-family:Prompt,Sarabun,sans-serif;font-weight:700;color:var(--green-d)"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><i class="fa-solid fa-clock-rotate-left"></i>ประวัติการปิดยอดสิ้นเดือน</div>
+    <div class="action-row" style="margin-bottom:12px">
+      <button class="btn btn-primary btn-sm" onclick="loadBankCloseHistory()"><i class="fa-solid fa-rotate"></i>โหลดประวัติ</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>เดือน/ปี</th><th>วันที่ปิดยอด</th><th>ผู้ดำเนินการ</th><th>ยอดฝาก</th><th>รายการ</th><th>หมายเหตุ</th></tr></thead>
+        <tbody id="bankCloseHistoryBody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
 <!-- ══════════ AUDIT LOG ══════════ -->
 <section class="page" id="page-audit">
   <div class="sec-title"><i class="fa-solid fa-shield-halved"></i>ประวัติการแก้ไขข้อมูล</div>
@@ -475,6 +553,7 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
         <option value="ADD_TX">เพิ่มรายการธุรกรรม</option>
         <option value="DELETE_TX">ลบรายการธุรกรรม</option>
         <option value="PROMOTE">เลื่อนชั้น</option>
+        <option value="MONTHLY_BANK_DEPOSIT">ปิดยอดสิ้นเดือน</option>
       </select>
       <input type="month" id="auditMonthFilter" onchange="renderAuditTable()">
     </div>
@@ -508,6 +587,10 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
 <!-- ══════════ REPORTS ══════════ -->
 <section class="page" id="page-reports">
   <div class="sec-title"><i class="fa-solid fa-chart-line"></i>รายงานสรุป</div>
+  <div class="subnav-row">
+    <button class="btn btn-primary btn-sm" onclick="switchPage('export')"><i class="fa-solid fa-file-export"></i>รายงาน Export PDF/Excel</button>
+    <button class="btn btn-teal btn-sm" onclick="switchPage('byclass')"><i class="fa-solid fa-layer-group"></i>รายงานแยกชั้น</button>
+  </div>
   <div class="card">
     <div class="card-title"><i class="fa-solid fa-calendar-days"></i>สรุปยอดรายเดือน</div>
     <div class="filter-bar"><select id="reportClassFilter" onchange="renderMonthlyReport()"><option value="">ทุกชั้น</option></select></div>
@@ -524,6 +607,29 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
       <div class="card-title"><i class="fa-solid fa-chart-pie"></i>สัดส่วนยอดออมแต่ละชั้น</div>
       <div class="chart-wrap"><canvas id="pieChart"></canvas></div>
     </div>
+  </div>
+</section>
+
+<!-- ══════════ SETTINGS ══════════ -->
+<section class="page" id="page-settings">
+  <div class="sec-title"><i class="fa-solid fa-gear"></i>ตั้งค่าและข้อมูลระบบ</div>
+  <div class="card">
+    <div class="card-title"><i class="fa-solid fa-table-list"></i>งานจัดการข้อมูล</div>
+    <div class="subnav-row">
+      <button class="btn btn-primary" onclick="switchPage('students')"><i class="fa-solid fa-users"></i>ข้อมูลนักเรียน</button>
+      <button class="btn btn-purple" onclick="switchPage('promote')"><i class="fa-solid fa-graduation-cap"></i>เลื่อนชั้น</button>
+      <button class="btn btn-teal" onclick="switchPage('audit')"><i class="fa-solid fa-shield-halved"></i>ประวัติการแก้ไข</button>
+      <button class="btn btn-ghost" onclick="initSystemSheets()"><i class="fa-solid fa-database"></i>ตรวจ/สร้างชีตระบบ</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><i class="fa-solid fa-school"></i>ข้อมูลพื้นฐาน</div>
+    <div class="summary-strip">
+      <div class="summary-box"><div class="label">ปีการศึกษา</div><div class="value" id="settingsAcademicYear">-</div></div>
+      <div class="summary-box"><div class="label">จำนวนชั้นเรียน</div><div class="value">11</div></div>
+      <div class="summary-box"><div class="label">ชีตใหม่สำหรับปิดยอด</div><div class="value" style="font-size:13px">MonthlyBankDeposits</div></div>
+    </div>
+    <div class="info-box"><i class="fa-solid fa-circle-info"></i><div>เมนูนี้รวมงานดูแลระบบไว้ที่เดียว เพื่อให้เมนูหลักของครูใช้งานจริงไม่รก แต่หน้าจัดการเดิมยังอยู่ครบและไม่ได้ถูกลบ</div></div>
   </div>
 </section>
 
@@ -590,11 +696,13 @@ var CLASSES = ["อ.2","อ.3","ป.1","ป.2","ป.3","ป.4","ป.5","ป.6","
 var NEXT_CLASS = {"อ.2":"อ.3","อ.3":"ป.1","ป.1":"ป.2","ป.2":"ป.3","ป.3":"ป.4","ป.4":"ป.5","ป.5":"ป.6","ป.6":"ม.1","ม.1":"ม.2","ม.2":"ม.3","ม.3":"จบการศึกษา"};
 var STATUS_LABEL = {active:"ปัจจุบัน",transferred:"ย้ายออก",graduated:"จบการศึกษา"};
 var STATUS_BADGE = {active:"badge-green",transferred:"badge-orange",graduated:"badge-teal"};
-var ACTION_LABEL = {ADD_STUDENT:"เพิ่มนักเรียน",EDIT_STUDENT:"แก้ไขนักเรียน",TRANSFER_OUT:"ย้ายออก",DELETE_STUDENT:"ลบนักเรียน",ADD_TX:"เพิ่มธุรกรรม",DELETE_TX:"ลบธุรกรรม",PROMOTE:"เลื่อนชั้น"};
+var ACTION_LABEL = {ADD_STUDENT:"เพิ่มนักเรียน",EDIT_STUDENT:"แก้ไขนักเรียน",TRANSFER_OUT:"ย้ายออก",DELETE_STUDENT:"ลบนักเรียน",ADD_TX:"เพิ่มธุรกรรม",DELETE_TX:"ลบธุรกรรม",PROMOTE:"เลื่อนชั้น",MONTHLY_BANK_DEPOSIT:"ปิดยอดสิ้นเดือน"};
 
 var appStudents = [];
 var appTx       = [];
 var appAudit    = [];
+var appBankDeposits = [];
+var bankCloseData = null;
 var exportRows  = [];  // เก็บ data แถวที่ preview ไว้ export
 
 // ══════════════════════════════════════════════════════════
@@ -692,13 +800,15 @@ function switchPage(name,btn){
   document.querySelectorAll(".page").forEach(function(p){p.classList.remove("active");});
   document.querySelectorAll(".nav-btn").forEach(function(b){b.classList.remove("active");});
   document.getElementById("page-"+name).classList.add("active");
-  btn.classList.add("active");
+  if(btn) btn.classList.add("active");
   if(name==="dashboard")  refreshDashboard();
   if(name==="reports")    refreshReports();
   if(name==="byclass")    renderClassGrid();
   if(name==="promote")    {loadPromoYearDefault();renderPromoHistory();}
   if(name==="audit")      loadAuditLog();
   if(name==="export")     populateExportSelects();
+  if(name==="monthclose") {initBankCloseDefaults();previewBankClose();loadBankCloseHistory();}
+  if(name==="settings")   refreshSettings();
 }
 function switchTxTab(name,btn){
   document.querySelectorAll(".tab-inner").forEach(function(b){b.classList.remove("active");});
@@ -1021,8 +1131,8 @@ function renderAuditTable(){
 function renderAuditStats(){
   var counts={};
   appAudit.forEach(function(a){counts[a.action]=(counts[a.action]||0)+1;});
-  var iconMap={ADD_STUDENT:"fa-user-plus",EDIT_STUDENT:"fa-pen",TRANSFER_OUT:"fa-right-from-bracket",DELETE_STUDENT:"fa-trash",ADD_TX:"fa-coins",DELETE_TX:"fa-receipt",PROMOTE:"fa-graduation-cap"};
-  var colorMap={ADD_STUDENT:"green",EDIT_STUDENT:"sky",TRANSFER_OUT:"orange",DELETE_STUDENT:"red",ADD_TX:"teal",DELETE_TX:"amber",PROMOTE:"purple"};
+  var iconMap={ADD_STUDENT:"fa-user-plus",EDIT_STUDENT:"fa-pen",TRANSFER_OUT:"fa-right-from-bracket",DELETE_STUDENT:"fa-trash",ADD_TX:"fa-coins",DELETE_TX:"fa-receipt",PROMOTE:"fa-graduation-cap",MONTHLY_BANK_DEPOSIT:"fa-building-columns"};
+  var colorMap={ADD_STUDENT:"green",EDIT_STUDENT:"sky",TRANSFER_OUT:"orange",DELETE_STUDENT:"red",ADD_TX:"teal",DELETE_TX:"amber",PROMOTE:"purple",MONTHLY_BANK_DEPOSIT:"teal"};
   var html="";
   Object.keys(ACTION_LABEL).forEach(function(k){
     html+='<div class="stat-card"><div class="stat-icon '+colorMap[k]+'"><i class="fa-solid '+(iconMap[k]||"fa-circle")+'"></i></div>'
@@ -1379,6 +1489,160 @@ function doExportPDF(){
     document.body.removeChild(wrap);
     showLoading(false);
   });
+}
+
+// ══════════════════════════════════════════════════════════
+// MONTHLY BANK DEPOSIT CLOSE
+// ══════════════════════════════════════════════════════════
+function initBankCloseDefaults(){
+  var now=new Date();
+  var m=document.getElementById("bankCloseMonth");
+  var y=document.getElementById("bankCloseYear");
+  if(m&&!m.value)m.value=String(now.getMonth()+1).padStart(2,"0");
+  if(y&&!y.value)y.value=now.getFullYear()+543;
+}
+
+function bankMonthLabel(month,year){
+  var gy=Number(year)>2400?Number(year)-543:Number(year);
+  return new Date(gy,Number(month)-1,1).toLocaleDateString("th-TH",{year:"numeric",month:"long"});
+}
+
+function setBankStatus(type,msg){
+  var cls=type==="success"?"success-box":type==="error"?"danger-box":"info-box";
+  var icon=type==="success"?"fa-circle-check":type==="error"?"fa-triangle-exclamation":"fa-circle-info";
+  document.getElementById("bankCloseStatus").className=cls;
+  document.getElementById("bankCloseStatus").innerHTML='<i class="fa-solid '+icon+'"></i><div>'+msg+'</div>';
+}
+
+function renderBankCloseSummary(data){
+  bankCloseData=data;
+  document.getElementById("bankPreviewCard").style.display="block";
+  document.getElementById("bankTotalAmount").textContent="฿"+fmt(data.totalAmount||0);
+  document.getElementById("bankTotalTx").textContent=(data.totalTransactions||0)+" รายการ";
+  document.getElementById("bankClosedAt").textContent=fmtDateTime(data.closedAt||new Date().toISOString());
+  document.getElementById("bankClosedBy").textContent=data.closedBy||"-";
+  var label=bankMonthLabel(data.month,data.year);
+  var note=document.getElementById("bankCloseNote").value.trim() || data.note || "-";
+  document.getElementById("bankSlipMeta").innerHTML=
+    'เดือน: <strong>'+label+'</strong> | วันที่ปิดยอด: <strong>'+fmtDateTime(data.closedAt||new Date().toISOString())+'</strong> | ผู้ดำเนินการ: <strong>'+(data.closedBy||"-")+'</strong><br>หมายเหตุ: '+escapeHtml(note);
+  var rows=data.classSummary||[];
+  document.getElementById("bankClassSummaryBody").innerHTML=rows.length?rows.map(function(r){
+    return '<tr><td><span class="badge badge-green">'+r.className+'</span></td><td>'+r.totalTransactions+'</td><td><span class="money">฿'+fmt(r.totalAmount)+'</span></td></tr>';
+  }).join(""):'<tr><td colspan="3" class="no-data">ไม่มีรายการฝากในเดือนนี้</td></tr>';
+  document.getElementById("bankSlipSummary").textContent='ยอดฝากรวม ฿'+fmt(data.totalAmount||0)+' | จำนวนรายการฝาก '+(data.totalTransactions||0)+' รายการ';
+}
+
+function previewBankClose(){
+  initBankCloseDefaults();
+  var month=document.getElementById("bankCloseMonth").value;
+  var year=Number(document.getElementById("bankCloseYear").value)||0;
+  showLoading(true,"กำลังสรุปยอดปิดเดือน...");
+  gasCall("getMonthlyBankDepositSummary",JSON.stringify({month:month,year:year}))
+    .then(function(r){
+      showLoading(false);
+      if(!r.success){showToast(r.error||"สรุปยอดไม่สำเร็จ","error");return;}
+      renderBankCloseSummary(r);
+      if(r.closed) setBankStatus("error","เดือน "+bankMonthLabel(month,year)+" ถูกปิดยอดแล้ว ไม่สามารถบันทึกซ้ำได้");
+      else setBankStatus("success","พร้อมบันทึกการนำฝากเข้าธนาคารสำหรับเดือน "+bankMonthLabel(month,year));
+    })
+    .catch(function(e){showLoading(false);showToast(String(e.message||e),"error");});
+}
+
+function saveBankClose(){
+  initBankCloseDefaults();
+  var month=document.getElementById("bankCloseMonth").value;
+  var year=Number(document.getElementById("bankCloseYear").value)||0;
+  var note=document.getElementById("bankCloseNote").value.trim();
+  showLoading(true,"กำลังบันทึกการนำฝากเข้าธนาคาร...");
+  gasCall("saveMonthlyBankDeposit",JSON.stringify({month:month,year:year,note:note}))
+    .then(function(r){
+      showLoading(false);
+      if(!r.success){
+        setBankStatus("error",r.error||"บันทึกไม่สำเร็จ");
+        showToast(r.error||"บันทึกไม่สำเร็จ","error");
+        if(r.existing) renderBankCloseSummary({
+          month:r.existing.month,year:r.existing.year,closedAt:r.existing.closedAt,closedBy:r.existing.closedBy,
+          totalAmount:r.existing.totalAmount,totalTransactions:r.existing.totalTransactions,
+          classSummary:JSON.parse(r.existing.classSummaryJson||"[]"),note:r.existing.note
+        });
+        return;
+      }
+      renderBankCloseSummary(r);
+      setBankStatus("success","บันทึกการนำฝากเข้าธนาคารสำเร็จ เลขที่ "+r.depositId);
+      showToast("บันทึกการนำฝากเข้าธนาคารสำเร็จ","success");
+      loadBankCloseHistory();
+    })
+    .catch(function(e){showLoading(false);showToast(String(e.message||e),"error");});
+}
+
+function loadBankCloseHistory(){
+  gasCall("getMonthlyBankDeposits")
+    .then(function(r){
+      appBankDeposits=(r.success&&r.data)?r.data:[];
+      renderBankCloseHistory();
+    })
+    .catch(function(){document.getElementById("bankCloseHistoryBody").innerHTML='<tr><td colspan="6" class="no-data">โหลดประวัติไม่ได้</td></tr>';});
+}
+
+function renderBankCloseHistory(){
+  var body=document.getElementById("bankCloseHistoryBody");
+  if(!body)return;
+  body.innerHTML=appBankDeposits.length?appBankDeposits.map(function(r){
+    return '<tr><td>'+bankMonthLabel(r.month,r.year)+'</td><td>'+fmtDateTime(r.closedAt)+'</td><td>'+escapeHtml(r.closedBy||"-")+'</td><td><span class="money">฿'+fmt(r.totalAmount)+'</span></td><td>'+r.totalTransactions+'</td><td>'+escapeHtml(r.note||"-")+'</td></tr>';
+  }).join(""):'<tr><td colspan="6" class="no-data">ยังไม่มีประวัติการปิดยอด</td></tr>';
+}
+
+function bankExportRows(){
+  if(!bankCloseData){showToast("กรุณากดสรุปยอดก่อน","error");return null;}
+  var rows=(bankCloseData.classSummary||[]).map(function(r){return [r.className,r.totalTransactions,r.totalAmount];});
+  return {
+    title:"ใบนำฝากเงินออมทรัพย์นักเรียนเข้าธนาคาร",
+    subtitle:bankMonthLabel(bankCloseData.month,bankCloseData.year),
+    heads:["ชั้นเรียน","จำนวนรายการฝาก","ยอดฝากรวม (บาท)"],
+    rows:rows,
+    summary:"ยอดฝากรวม ฿"+fmt(bankCloseData.totalAmount||0)+" | จำนวนรายการฝาก "+(bankCloseData.totalTransactions||0)+" รายการ",
+    moneyColumns:[2],
+    filename:"ใบนำฝากธนาคาร_"+bankCloseData.year+"_"+bankCloseData.month
+  };
+}
+
+function exportBankCloseExcel(){
+  var d=bankExportRows(); if(!d)return;
+  var wsData=[[d.title],[d.subtitle],["วันที่ปิดยอด",fmtDateTime(bankCloseData.closedAt||new Date().toISOString())],["ผู้ดำเนินการ",bankCloseData.closedBy||"-"],["หมายเหตุ",document.getElementById("bankCloseNote").value.trim()||bankCloseData.note||"-"],[],d.heads];
+  d.rows.forEach(function(r){wsData.push(r);});
+  wsData.push([],[d.summary]);
+  var ws=XLSX.utils.aoa_to_sheet(wsData),wb=XLSX.utils.book_new();
+  ws["!cols"]=[{wch:18},{wch:18},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,ws,"ใบนำฝาก");
+  XLSX.writeFile(wb,d.filename+".xlsx");
+}
+
+function exportBankCloseCSV(){
+  var d=bankExportRows(); if(!d)return;
+  var ws=XLSX.utils.aoa_to_sheet([d.heads].concat(d.rows).concat([[],[d.summary]]));
+  var csv=XLSX.utils.sheet_to_csv(ws);
+  var blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8;"});
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download=d.filename+".csv"; a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function exportBankClosePDF(){
+  var d=bankExportRows(); if(!d)return;
+  exportRows=d;
+  doExportPDF();
+}
+
+function refreshSettings(){
+  var y=document.getElementById("settingsAcademicYear");
+  if(y)y.textContent=new Date().getFullYear()+543;
+}
+
+function initSystemSheets(){
+  showLoading(true,"กำลังตรวจ/สร้างชีตระบบ...");
+  gasCall("initSheets")
+    .then(function(r){showLoading(false);showToast(r.success?"ตรวจชีตระบบเรียบร้อย":"ตรวจชีตไม่สำเร็จ",""+(r.success?"success":"error"));})
+    .catch(function(e){showLoading(false);showToast(String(e.message||e),"error");});
 }
 
 // ══════════════════════════════════════════════════════════
