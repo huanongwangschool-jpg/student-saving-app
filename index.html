@@ -274,7 +274,7 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
 <!-- ══════════ STUDENTS ══════════ -->
 <section class="page" id="page-students">
   <div class="sec-title"><i class="fa-solid fa-users"></i>จัดการข้อมูลนักเรียน</div>
-  <div class="card">
+  <div class="card admin-only" style="display:none">
     <div class="card-title"><i class="fa-solid fa-user-plus"></i>เพิ่มนักเรียนใหม่</div>
     <div class="form-row">
       <div class="form-group"><label>ชื่อ-นามสกุล</label><input type="text" id="newStudentName" placeholder="เช่น เด็กหญิงสมใจ ใจดี"></div>
@@ -282,6 +282,11 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
       <div class="form-group"><label>เลขที่</label><input type="number" id="newStudentNumber" placeholder="1" min="1"></div>
     </div>
     <button class="btn btn-green" onclick="doAddStudent()"><i class="fa-solid fa-plus"></i>เพิ่มนักเรียน</button>
+  </div>
+  <div class="card admin-only" style="display:none">
+    <div class="card-title"><i class="fa-solid fa-file-import"></i>นำเข้านักเรียนจำนวนมาก</div>
+    <div class="info-box"><i class="fa-solid fa-circle-info"></i><div>สำหรับผู้ดูแลระบบเท่านั้น ใช้เมื่อต้องเพิ่มนักเรียนหลายคนพร้อมกันแบบรายชั้น โดยไม่ต้องกรอกรหัสนักเรียน</div></div>
+    <button class="btn btn-amber" onclick="switchPage('import')"><i class="fa-solid fa-file-import"></i>เปิดหน้านำเข้านักเรียน</button>
   </div>
   <div class="card">
     <div class="card-title"><i class="fa-solid fa-list"></i>รายชื่อนักเรียน</div>
@@ -302,12 +307,55 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
   </div>
 </section>
 
+<!-- ══════════ IMPORT STUDENTS ══════════ -->
+<section class="page admin-only" id="page-import" style="display:none">
+  <div class="sec-title"><i class="fa-solid fa-file-import"></i>นำเข้านักเรียน</div>
+  <div class="card">
+    <div class="card-title"><i class="fa-solid fa-list-check"></i>วางรายชื่อนักเรียนแบบรายชั้น</div>
+    <div class="info-box"><i class="fa-solid fa-circle-info"></i><div>เลือกชั้นเรียนก่อน แล้ววางข้อมูลรูปแบบ <strong>เลขที่,ชื่อ,นามสกุล</strong> หรือ <strong>เลขที่,ชื่อ,นามสกุล,ชั้นเรียน</strong> ระบบจะสร้างรหัสภายในให้อัตโนมัติและไม่แสดงให้ผู้ใช้กรอก</div></div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>ชั้นเรียนที่ต้องการนำเข้า</label>
+        <select id="importClass"></select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>วางรายชื่อ</label>
+      <textarea id="importText" style="min-height:170px" placeholder="เลขที่,ชื่อ,นามสกุล&#10;1,เด็กชายสมชาย,ใจดี&#10;2,เด็กหญิงสมศรี,เรียนดี&#10;3,เด็กชายอนันต์,ขยัน"></textarea>
+    </div>
+    <div class="action-row">
+      <button class="btn btn-primary" onclick="previewStudentImport()"><i class="fa-solid fa-magnifying-glass"></i>ตรวจสอบข้อมูล</button>
+      <button class="btn btn-ghost" onclick="clearStudentImport()"><i class="fa-solid fa-eraser"></i>ล้างข้อมูล</button>
+    </div>
+  </div>
+  <div class="card" id="importPreviewCard" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+      <div class="card-title" style="margin-bottom:0"><i class="fa-solid fa-table"></i>ตรวจสอบก่อนนำเข้า</div>
+      <button class="btn btn-green" id="importConfirmBtn" onclick="confirmStudentImport()"><i class="fa-solid fa-check"></i>ยืนยันนำเข้า</button>
+    </div>
+    <div class="summary-strip">
+      <div class="summary-box"><div class="label">รายการทั้งหมด</div><div class="value" id="importTotalCount">-</div></div>
+      <div class="summary-box"><div class="label">พร้อมนำเข้า</div><div class="value money" id="importReadyCount">-</div></div>
+      <div class="summary-box"><div class="label">ซ้ำ/ผิดพลาด</div><div class="value money-neg" id="importErrorCount">-</div></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>สถานะ</th><th>บรรทัด</th><th>เลขที่</th><th>ชื่อ</th><th>นามสกุล</th><th>ชั้นเรียน</th><th>หมายเหตุ</th></tr></thead>
+        <tbody id="importPreviewBody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
 <!-- ══════════ TRANSACTIONS ══════════ -->
 <section class="page" id="page-transactions">
   <div class="sec-title"><i class="fa-solid fa-coins"></i>บันทึกฝาก-ถอนเงิน</div>
   <div class="info-box" style="justify-content:space-between;align-items:center;flex-wrap:wrap">
     <div><i class="fa-solid fa-chalkboard-user"></i> ชั้นเรียน: <strong id="teacherContextClass">-</strong> | ครูผู้ทำรายการ: <strong id="teacherContextName">-</strong></div>
-    <button class="btn btn-primary btn-sm" onclick="openTeacherContextModal()"><i class="fa-solid fa-pen"></i>เปลี่ยนชั้นเรียน / เปลี่ยนครูผู้ทำรายการ</button>
+    <div class="action-row">
+      <button class="btn btn-primary btn-sm" onclick="openTeacherContextModal()"><i class="fa-solid fa-pen"></i>เปลี่ยนชั้นเรียน / เปลี่ยนครูผู้ทำรายการ</button>
+      <button class="btn btn-teal btn-sm" onclick="switchPage('students')"><i class="fa-solid fa-users"></i>ดูรายชื่อนักเรียน</button>
+    </div>
   </div>
   <div class="card">
     <div class="tab-row">
@@ -651,6 +699,7 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
     <div class="card-title"><i class="fa-solid fa-table-list"></i>งานจัดการข้อมูล</div>
     <div class="subnav-row">
       <button class="btn btn-primary" onclick="switchPage('students')"><i class="fa-solid fa-users"></i>ข้อมูลนักเรียน</button>
+      <button class="btn btn-amber admin-only" onclick="switchPage('import')" style="display:none"><i class="fa-solid fa-file-import"></i>นำเข้านักเรียน</button>
       <button class="btn btn-purple" onclick="switchPage('promote')"><i class="fa-solid fa-graduation-cap"></i>เลื่อนชั้น</button>
       <button class="btn btn-teal" onclick="switchPage('audit')"><i class="fa-solid fa-shield-halved"></i>ประวัติการแก้ไข</button>
       <button class="btn btn-amber" onclick="loadAuditLogsV2()"><i class="fa-solid fa-clipboard-list"></i>AuditLogs Admin</button>
@@ -774,6 +823,7 @@ var appBankDeposits = [];
 var bankCloseData = null;
 var exportRows  = [];  // เก็บ data แถวที่ preview ไว้ export
 var appFinancialSummary = {unclosedAmount:0,bankAmount:0,totalAmount:0};
+var importPreviewRows = [];
 var teacherContext = {className:"",teacherName:""};
 var adminSession = {isAdmin:false,email:"",token:""};
 
@@ -840,9 +890,10 @@ function applyRoleUI(){
   document.querySelectorAll(".admin-only").forEach(function(el){el.style.display=adminSession.isAdmin?"":"none";});
   document.getElementById("adminLoginOpenBtn").style.display=adminSession.isAdmin?"none":"";
   document.getElementById("adminLogoutBtn").style.display=adminSession.isAdmin?"":"none";
-  if(!adminSession.isAdmin&&document.getElementById("page-settings").classList.contains("active")) switchPage("dashboard");
+  if(!adminSession.isAdmin&&(document.getElementById("page-settings").classList.contains("active")||document.getElementById("page-import").classList.contains("active"))) switchPage("dashboard");
   renderBankCloseHistory();
   renderTxTable();
+  renderStudentsTable();
 }
 function adminLogin(){
   var email=document.getElementById("adminEmailInput").value.trim();
@@ -948,7 +999,7 @@ function showToast(msg,type){
 }
 
 function switchPage(name,btn){
-  if((name==="settings"||name==="audit"||name==="students"||name==="promote")&&!adminSession.isAdmin){
+  if((name==="settings"||name==="audit"||name==="promote"||name==="import")&&!adminSession.isAdmin){
     showToast("เมนูนี้สำหรับผู้ดูแลระบบเท่านั้น","error");
     openModal("adminLoginModal");
     return;
@@ -960,6 +1011,8 @@ function switchPage(name,btn){
   if(name==="dashboard")  refreshDashboard();
   if(name==="reports")    {refreshReports();refreshRealBalanceCards();}
   if(name==="byclass")    {renderClassGrid();refreshRealBalanceCards();}
+  if(name==="students")   renderStudentsTable();
+  if(name==="import")     initStudentImport();
   if(name==="promote")    {loadPromoYearDefault();renderPromoHistory();}
   if(name==="audit")      loadAuditLog();
   if(name==="export")     {populateExportSelects();refreshRealBalanceCards();}
@@ -974,7 +1027,7 @@ function switchTxTab(name,btn){
 
 function populateSelects(){
   var all=["newStudentClass","editStudentClass","depClass","wdrClass",
-           "studentClassFilter","txClassFilter","reportClassFilter","promoClassFilter"];
+           "studentClassFilter","txClassFilter","reportClassFilter","promoClassFilter","importClass"];
   all.forEach(function(id){
     var el=document.getElementById(id); if(!el)return;
     var hasAll=["studentClassFilter","txClassFilter","reportClassFilter","promoClassFilter"].indexOf(id)>=0;
@@ -1078,7 +1131,9 @@ function renderStudentsTable(){
     var bal=getBalance(s.id);
     var rc=s.status==="transferred"?"row-transferred":s.status==="graduated"?"row-graduated":"";
     var esc=s.name.replace(/'/g,"\\'").replace(/"/g,"&quot;");
-    var btns=s.status==="active"
+    var btns=!adminSession.isAdmin
+      ?'<span style="font-size:12px;color:var(--text-s)">ดูข้อมูล</span>'
+      :s.status==="active"
       ?'<button class="btn btn-yellow btn-sm" onclick="openEditStudent(\''+s.id+'\')"><i class="fa-solid fa-pen"></i></button>'
        +'<button class="btn btn-orange btn-sm" onclick="openTransferModal(\''+s.id+'\')"><i class="fa-solid fa-right-from-bracket"></i></button>'
        +'<button class="btn btn-red btn-sm" onclick="openDeleteModal(\''+s.id+'\',\''+esc+'\')"><i class="fa-solid fa-trash"></i></button>'
@@ -1103,6 +1158,119 @@ function doAddStudent(){
   gasCall("addStudent",JSON.stringify({name:name,className:cls,number:Number(num)}))
     .then(function(r){showLoading(false);if(r.success){appStudents.push({id:r.id,name:name,className:cls,number:Number(num),status:"active",statusNote:"",createdAt:""});showToast("เพิ่มนักเรียนสำเร็จ!","success");document.getElementById("newStudentName").value="";document.getElementById("newStudentNumber").value="";refreshAll();}else showToast(r.error,"error");})
     .catch(function(e){showLoading(false);showToast(String(e.message||e),"error");});
+}
+
+function initStudentImport(){
+  var cls=document.getElementById("importClass");
+  if(cls&&!cls.value) cls.value=teacherContext.className||CLASSES[0];
+}
+function normalizeImportName(name){
+  return String(name||"").replace(/\s+/g,"").toLowerCase();
+}
+function parseStudentImportLine(line,lineNo,defaultClass){
+  var raw=String(line||"").trim();
+  if(!raw) return null;
+  if(/เลขที่/.test(raw)&&/ชื่อ/.test(raw)) return null;
+  var parts=raw.indexOf(",")>=0 ? raw.split(",") : raw.split(/\t+/);
+  if(parts.length<3) parts=raw.split(/\s+/);
+  parts=parts.map(function(p){return String(p||"").trim();});
+  var number=parts[0]||"";
+  var firstName=parts[1]||"";
+  var lastName=parts[2]||"";
+  var cls=defaultClass || parts[3] || "";
+  if(parts.length===2&&parts[1]){
+    var nameParts=parts[1].split(/\s+/);
+    firstName=nameParts.shift()||"";
+    lastName=nameParts.join(" ");
+  }
+  return {lineNo:lineNo,number:number,firstName:firstName,lastName:lastName,className:cls,errors:[]};
+}
+function validateStudentImportRows(rows){
+  var existingNumber={},existingName={},batchNumber={},batchName={};
+  appStudents.forEach(function(s){
+    var cls=s.className||"",num=String(s.number||"").trim(),nameKey=normalizeImportName(s.name);
+    if(cls&&num) existingNumber[cls+"|"+num]=true;
+    if(cls&&nameKey) existingName[cls+"|"+nameKey]=true;
+  });
+  rows.forEach(function(r){
+    var errors=[];
+    var num=Number(r.number);
+    var fullName=(String(r.firstName||"").trim()+" "+String(r.lastName||"").trim()).replace(/\s+/g," ").trim();
+    var cls=String(r.className||"").trim();
+    if(!cls) errors.push("ไม่พบชั้นเรียน");
+    else if(CLASSES.indexOf(cls)<0) errors.push("ชั้นเรียนไม่ถูกต้อง");
+    if(!String(r.number||"").trim()||!num||num<=0) errors.push("เลขที่ไม่ถูกต้อง");
+    if(!fullName) errors.push("กรุณากรอกชื่อ-นามสกุล");
+    var numberKey=cls+"|"+String(num);
+    var nameKey=cls+"|"+normalizeImportName(fullName);
+    if(!errors.length){
+      if(existingNumber[numberKey]) errors.push("เลขที่ซ้ำในชั้นเดียวกัน");
+      if(existingName[nameKey]) errors.push("ชื่อ-นามสกุลซ้ำในชั้นเดียวกัน");
+      if(batchNumber[numberKey]) errors.push("เลขที่ซ้ำในชุดนำเข้า");
+      if(batchName[nameKey]) errors.push("ชื่อ-นามสกุลซ้ำในชุดนำเข้า");
+    }
+    r.name=fullName;
+    r.errors=errors;
+    if(!errors.length){
+      batchNumber[numberKey]=true;
+      batchName[nameKey]=true;
+    }
+  });
+  return rows;
+}
+function previewStudentImport(){
+  if(!adminSession.isAdmin){showToast("ต้องเข้าสู่ระบบ Admin ก่อนนำเข้านักเรียน","error");openModal("adminLoginModal");return;}
+  var cls=document.getElementById("importClass").value;
+  var text=document.getElementById("importText").value;
+  if(!cls){showToast("กรุณาเลือกชั้นเรียน","error");return;}
+  if(!text.trim()){showToast("กรุณาวางรายชื่อนักเรียนก่อน","error");return;}
+  var rows=[];
+  text.split(/\r?\n/).forEach(function(line,idx){
+    var row=parseStudentImportLine(line,idx+1,cls);
+    if(row) rows.push(row);
+  });
+  if(!rows.length){showToast("ไม่พบรายการนักเรียนที่อ่านได้","error");return;}
+  importPreviewRows=validateStudentImportRows(rows);
+  renderStudentImportPreview();
+  document.getElementById("importPreviewCard").style.display="block";
+  showToast("ตรวจสอบข้อมูลแล้ว","success");
+}
+function renderStudentImportPreview(){
+  var total=importPreviewRows.length;
+  var ready=importPreviewRows.filter(function(r){return !r.errors.length;}).length;
+  var error=total-ready;
+  document.getElementById("importTotalCount").textContent=total+" รายการ";
+  document.getElementById("importReadyCount").textContent=ready+" รายการ";
+  document.getElementById("importErrorCount").textContent=error+" รายการ";
+  document.getElementById("importConfirmBtn").disabled=ready===0;
+  document.getElementById("importPreviewBody").innerHTML=importPreviewRows.map(function(r){
+    var ok=!r.errors.length;
+    return '<tr><td><span class="badge '+(ok?'badge-green':'badge-red')+'">'+(ok?'พร้อมนำเข้า':'ตรวจสอบ')+'</span></td>'
+      +'<td>'+r.lineNo+'</td><td>'+escapeHtml(r.number||"-")+'</td><td>'+escapeHtml(r.firstName||"-")+'</td><td>'+escapeHtml(r.lastName||"-")+'</td>'
+      +'<td><span class="badge badge-sky">'+escapeHtml(r.className||"-")+'</span></td><td>'+escapeHtml(ok?"-":r.errors.join(", "))+'</td></tr>';
+  }).join("");
+}
+function clearStudentImport(){
+  document.getElementById("importText").value="";
+  importPreviewRows=[];
+  document.getElementById("importPreviewCard").style.display="none";
+}
+function confirmStudentImport(){
+  if(!adminSession.isAdmin){showToast("ต้องเข้าสู่ระบบ Admin ก่อนนำเข้านักเรียน","error");openModal("adminLoginModal");return;}
+  var ready=importPreviewRows.filter(function(r){return !r.errors.length;});
+  if(!ready.length){showToast("ไม่มีรายการที่พร้อมนำเข้า","error");return;}
+  showLoading(true,"กำลังนำเข้านักเรียน...");
+  gasCall("importStudentsBulk",JSON.stringify({
+    adminToken:adminSession.token,
+    className:document.getElementById("importClass").value,
+    students:ready.map(function(r){return {lineNo:r.lineNo,number:r.number,firstName:r.firstName,lastName:r.lastName,className:r.className};})
+  })).then(function(r){
+    showLoading(false);
+    if(!r.success){showToast(r.error||"นำเข้าไม่สำเร็จ","error");return;}
+    showToast("นำเข้านักเรียนสำเร็จ "+(r.insertedCount||0)+" คน","success");
+    clearStudentImport();
+    loadAll();
+  }).catch(function(e){showLoading(false);showToast(String(e.message||e),"error");});
 }
 function openEditStudent(id){
   var s=appStudents.find(function(x){return x.id===id;});if(!s)return;

@@ -190,6 +190,96 @@ function addStudent(dataJson) {
   } catch(e) { return JSON.stringify({ success: false, error: e.message }); }
 }
 
+function _normalizeStudentFullName(name) {
+  return String(name || "").replace(/\s+/g, "").toLowerCase();
+}
+
+function importStudentsBulk(dataJson) {
+  try {
+    var data = JSON.parse(dataJson || "{}");
+    var adminEmail = _requireAdmin(data.adminToken);
+    var defaultClass = String(data.className || "").trim();
+    var items = Array.isArray(data.students) ? data.students : [];
+    if (!items.length) return JSON.stringify({success:false,error:"ไม่มีรายการนักเรียนสำหรับนำเข้า"});
+    if (defaultClass && CLASSES.indexOf(defaultClass) < 0) return JSON.stringify({success:false,error:"ชั้นเรียนไม่ถูกต้อง"});
+
+    var sh = getOrCreateSheet(SHEET_STUDENTS, [
+      "StudentID","Name","Class","Number","Status","StatusNote","CreatedAt"
+    ]);
+    var rows = sh.getDataRange().getValues();
+    var existingNumber = {};
+    var existingName = {};
+    for (var i=1;i<rows.length;i++) {
+      var r = rows[i];
+      if (!r[0]) continue;
+      var cls = String(r[2] || "").trim();
+      var num = String(r[3] || "").trim();
+      var nameKey = _normalizeStudentFullName(r[1]);
+      if (cls && num) existingNumber[cls + "|" + num] = true;
+      if (cls && nameKey) existingName[cls + "|" + nameKey] = true;
+    }
+
+    var batchNumber = {};
+    var batchName = {};
+    var ready = [];
+    var errors = [];
+    items.forEach(function(item, idx) {
+      var lineNo = Number(item.lineNo || (idx + 1));
+      var cls = String(item.className || defaultClass || "").trim();
+      var numberText = String(item.number == null ? "" : item.number).trim();
+      var number = Number(numberText);
+      var firstName = String(item.firstName || "").trim();
+      var lastName = String(item.lastName || "").trim();
+      var fullName = String(item.name || (firstName + " " + lastName)).replace(/\s+/g, " ").trim();
+      var rowErrors = [];
+      if (!cls) rowErrors.push("ไม่พบชั้นเรียน");
+      else if (CLASSES.indexOf(cls) < 0) rowErrors.push("ชั้นเรียนไม่ถูกต้อง");
+      if (!numberText || !number || number <= 0) rowErrors.push("เลขที่ไม่ถูกต้อง");
+      if (!fullName) rowErrors.push("กรุณากรอกชื่อ-นามสกุล");
+
+      var numberKey = cls + "|" + String(number);
+      var nameKey = cls + "|" + _normalizeStudentFullName(fullName);
+      if (!rowErrors.length) {
+        if (existingNumber[numberKey]) rowErrors.push("เลขที่ซ้ำในชั้นเดียวกัน");
+        if (existingName[nameKey]) rowErrors.push("ชื่อ-นามสกุลซ้ำในชั้นเดียวกัน");
+        if (batchNumber[numberKey]) rowErrors.push("เลขที่ซ้ำในชุดนำเข้า");
+        if (batchName[nameKey]) rowErrors.push("ชื่อ-นามสกุลซ้ำในชุดนำเข้า");
+      }
+
+      if (rowErrors.length) {
+        errors.push({lineNo:lineNo,number:numberText,name:fullName,className:cls,error:rowErrors.join(", ")});
+        return;
+      }
+      batchNumber[numberKey] = true;
+      batchName[nameKey] = true;
+      ready.push({lineNo:lineNo,number:number,name:fullName,className:cls});
+    });
+
+    if (!ready.length) {
+      return JSON.stringify({success:false,error:"ไม่มีรายการที่พร้อมนำเข้า",insertedCount:0,skippedCount:errors.length,errors:errors});
+    }
+
+    var now = new Date();
+    var createdAt = now.toISOString();
+    var base = now.getTime();
+    var values = ready.map(function(s, idx) {
+      var id = "S" + base + "_" + (idx + 1);
+      s.id = id;
+      return [id, s.name, s.className, s.number, "active", "", createdAt];
+    });
+    sh.getRange(sh.getLastRow()+1, 1, values.length, values[0].length).setValues(values);
+
+    writeAudit("IMPORT_STUDENTS",
+      "นำเข้านักเรียนจำนวนมาก " + ready.length + " คน" + (defaultClass ? " ชั้น " + defaultClass : ""), "");
+    writeAuditLog("IMPORT_STUDENTS","StudentBulk","",
+      "",
+      {count:ready.length,className:defaultClass,students:ready},
+      adminEmail,
+      "นำเข้านักเรียนจำนวนมาก");
+    return JSON.stringify({success:true,insertedCount:ready.length,skippedCount:errors.length,inserted:ready,errors:errors});
+  } catch(e) { return JSON.stringify({success:false,error:e.message}); }
+}
+
 function updateStudent(dataJson) {
   try {
     var data = JSON.parse(dataJson);
