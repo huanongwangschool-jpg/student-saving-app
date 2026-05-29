@@ -589,7 +589,7 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
       </div>
       <div class="action-row">
         <button class="btn btn-primary" onclick="previewBankClose()"><i class="fa-solid fa-eye"></i>สรุปยอด</button>
-        <button class="btn btn-green" id="bankSaveBtn" onclick="saveBankClose()"><i class="fa-solid fa-building-columns"></i>บันทึกการนำฝากเข้าธนาคาร</button>
+        <button class="btn btn-green" id="bankSaveBtn" onclick="saveBankClose()" disabled><i class="fa-solid fa-building-columns"></i>บันทึกการนำฝากเข้าธนาคาร</button>
       </div>
     </div>
 
@@ -1164,7 +1164,6 @@ function refreshRealBalanceCards(){
       };
       [
         ["unclosedCash",r.unclosedAmount],["bankCash",r.bankAmount],["realTotalCash",r.totalAmount],
-        ["bankUnclosedCash",r.unclosedAmount],["bankDepositedCash",r.bankAmount],["bankRealTotalCash",r.totalAmount],
         ["reportUnclosedCash",r.unclosedAmount],["reportBankCash",r.bankAmount],["reportRealTotalCash",r.totalAmount],
         ["exportUnclosedCash",r.unclosedAmount],["exportBankCash",r.bankAmount],["exportRealTotalCash",r.totalAmount],
         ["classUnclosedCash",r.unclosedAmount],["classBankCash",r.bankAmount],["classRealTotalCash",r.totalAmount]
@@ -1173,6 +1172,7 @@ function refreshRealBalanceCards(){
       });
       renderClassUnclosedSummary(r.classUnclosedSummary||[]);
       renderBankCloseClassGrid();
+      renderBankCloseFinancialStatus(bankCloseData);
     })
     .catch(function(){});
 }
@@ -1207,9 +1207,49 @@ function renderBankCloseClassGrid(){
 function selectBankCloseClass(cls,card){
   document.getElementById("bankCloseClass").value=cls;
   document.getElementById("bankSelectedClassLabel").textContent=cls;
+  var saveBtn=document.getElementById("bankSaveBtn");
+  if(saveBtn)saveBtn.disabled=false;
   document.querySelectorAll("#bankCloseClassGrid .class-badge").forEach(function(b){b.classList.remove("active");});
   if(card)card.classList.add("active");
+  renderBankCloseFinancialStatus();
   previewBankClose();
+}
+
+function getBankClassFinancialStatus(cls){
+  var item=classUnclosedMap[cls]||{amount:0,transactions:0};
+  var bankAmount=(appBankDeposits||[]).filter(function(r){
+    return String(r.className||"ทั้งโรงเรียน")===cls && String(r.status||"ACTIVE")==="ACTIVE";
+  }).reduce(function(a,r){return a+(Number(r.totalAmount)||0);},0);
+  return {unclosedAmount:Number(item.amount)||0,unclosedTransactions:Number(item.transactions)||0,bankAmount:bankAmount,totalAmount:(Number(item.amount)||0)+bankAmount};
+}
+
+function renderBankCloseFinancialStatus(summaryData){
+  var cls=document.getElementById("bankCloseClass").value;
+  var ids=["bankUnclosedCash","bankDepositedCash","bankRealTotalCash","bankTotalAmount","bankTotalTx","bankClosedAt","bankClosedBy"];
+  if(!cls){
+    ids.forEach(function(id){
+      var el=document.getElementById(id);
+      if(el)el.textContent="กรุณาเลือกชั้นเรียนก่อน";
+    });
+    var saveBtn=document.getElementById("bankSaveBtn");
+    if(saveBtn)saveBtn.disabled=true;
+    return;
+  }
+  var selectedMonth=document.getElementById("bankCloseMonth").value;
+  var selectedYear=Number(document.getElementById("bankCloseYear").value)||0;
+  if(summaryData&&(String(summaryData.className||cls)!==cls||String(summaryData.month)!==String(selectedMonth)||Number(summaryData.year)!==selectedYear)){
+    summaryData=null;
+  }
+  var fin=getBankClassFinancialStatus(cls);
+  var saveBtn=document.getElementById("bankSaveBtn");
+  if(saveBtn)saveBtn.disabled=false;
+  document.getElementById("bankUnclosedCash").textContent="฿"+fmt(fin.unclosedAmount);
+  document.getElementById("bankDepositedCash").textContent="฿"+fmt(fin.bankAmount);
+  document.getElementById("bankRealTotalCash").textContent="฿"+fmt(fin.totalAmount);
+  document.getElementById("bankTotalAmount").textContent="฿"+fmt(summaryData?summaryData.totalAmount||0:0);
+  document.getElementById("bankTotalTx").textContent=(summaryData?summaryData.totalTransactions||0:0)+" รายการ";
+  document.getElementById("bankClosedAt").textContent=summaryData?fmtDateTime(summaryData.closedAt||new Date().toISOString()):"-";
+  document.getElementById("bankClosedBy").textContent=summaryData?(document.getElementById("bankClosedByInput").value.trim()||summaryData.closedBy||"-"):"-";
 }
 
 // ══════════════════════════════════════════════════════════
@@ -2014,8 +2054,8 @@ function escapeHtml(v){
   });
 }
 
-function financialSummaryPdfHtml(){
-  var fs=appFinancialSummary||{};
+function financialSummaryPdfHtml(summaryOverride){
+  var fs=summaryOverride||appFinancialSummary||{};
   var items=[
     ["เงินคงเหลือที่ยังไม่ได้ปิดยอด",Number(fs.unclosedAmount)||0],
     ["เงินฝากในธนาคาร",Number(fs.bankAmount)||0],
@@ -2049,7 +2089,7 @@ function doExportPDF(){
     +'<div><strong>ช่วงข้อมูล:</strong> '+escapeHtml(d.subtitle||"-")+'</div>'
     +'<div><strong>วันที่พิมพ์รายงาน:</strong> '+escapeHtml(printDate)+'</div>'
     +'</div>'
-    +financialSummaryPdfHtml()
+    +financialSummaryPdfHtml(d.financialSummary)
     +'<table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:auto"><thead><tr>'
     +d.heads.map(function(h){return '<th style="background:#0ea5e9;color:#fff;border:1px solid #bae6fd;padding:7px;text-align:left;white-space:normal">'+escapeHtml(h)+'</th>';}).join("")
     +'</tr></thead><tbody>'
@@ -2122,6 +2162,7 @@ function initBankCloseDefaults(){
   var label=document.getElementById("bankSelectedClassLabel");
   if(label)label.textContent=(cls&&cls.value)||"ยังไม่ได้เลือกชั้นเรียน";
   renderBankCloseClassGrid();
+  renderBankCloseFinancialStatus();
   refreshRealBalanceCards();
 }
 
@@ -2140,11 +2181,8 @@ function setBankStatus(type,msg){
 function renderBankCloseSummary(data){
   bankCloseData=data;
   document.getElementById("bankPreviewCard").style.display="block";
-  document.getElementById("bankTotalAmount").textContent="฿"+fmt(data.totalAmount||0);
-  document.getElementById("bankTotalTx").textContent=(data.totalTransactions||0)+" รายการ";
-  document.getElementById("bankClosedAt").textContent=fmtDateTime(data.closedAt||new Date().toISOString());
   var displayClosedBy=document.getElementById("bankClosedByInput").value.trim()||data.closedBy||"-";
-  document.getElementById("bankClosedBy").textContent=displayClosedBy;
+  renderBankCloseFinancialStatus(data);
   var label=bankMonthLabel(data.month,data.year);
   var classLabel=data.className||document.getElementById("bankCloseClass").value||"ทั้งโรงเรียน";
   var note=document.getElementById("bankCloseNote").value.trim() || data.note || "-";
@@ -2214,6 +2252,7 @@ function loadBankCloseHistory(){
       appBankDepositsLoaded=true;
       appBankDeposits=(r.success&&r.data)?r.data:[];
       renderBankCloseHistory();
+      renderBankCloseFinancialStatus(bankCloseData);
     })
     .catch(function(){appBankDepositsLoaded=true;document.getElementById("bankCloseHistoryBody").innerHTML='<tr><td colspan="6" class="no-data">โหลดประวัติไม่ได้</td></tr>';});
 }
@@ -2261,7 +2300,10 @@ function reverseBankClose(id){
 
 function bankExportRows(){
   if(!bankCloseData){showToast("กรุณากดสรุปยอดก่อน","error");return null;}
-  var classLabel=bankCloseData.className||document.getElementById("bankCloseClass").value||"ทั้งโรงเรียน";
+  var selectedClass=document.getElementById("bankCloseClass").value;
+  if(!selectedClass){showToast("กรุณาเลือกชั้นเรียนก่อนปิดยอด","error");return null;}
+  if(String(bankCloseData.className||selectedClass)!==selectedClass){showToast("กรุณากดสรุปยอดของชั้นเรียนที่เลือกก่อน","error");return null;}
+  var classLabel=selectedClass;
   var rows=(bankCloseData.classSummary||[]).map(function(r){return [r.className,r.totalTransactions,r.totalAmount];});
   return {
     title:"ใบนำฝากเงินออมทรัพย์นักเรียนเข้าธนาคาร - ชั้น "+classLabel,
@@ -2270,6 +2312,7 @@ function bankExportRows(){
     rows:rows,
     summary:"ยอดฝากรวม ฿"+fmt(bankCloseData.totalAmount||0)+" | จำนวนรายการฝาก "+(bankCloseData.totalTransactions||0)+" รายการ",
     moneyColumns:[2],
+    financialSummary:getBankClassFinancialStatus(classLabel),
     filename:"ใบนำฝากธนาคาร_"+classLabel+"_"+bankCloseData.year+"_"+bankCloseData.month
   };
 }
@@ -2277,7 +2320,7 @@ function bankExportRows(){
 function exportBankCloseExcel(){
   var d=bankExportRows(); if(!d)return;
   var closedBy=document.getElementById("bankClosedByInput").value.trim()||bankCloseData.closedBy||"-";
-  var fs=appFinancialSummary||{};
+  var fs=getBankClassFinancialStatus(bankCloseData.className||document.getElementById("bankCloseClass").value);
   var wsData=[[d.title],[d.subtitle],["วันที่ปิดยอด",fmtDateTime(bankCloseData.closedAt||new Date().toISOString())],["ผู้ดำเนินการ",closedBy],["หมายเหตุ",document.getElementById("bankCloseNote").value.trim()||bankCloseData.note||"-"],[],["เงินคงเหลือที่ยังไม่ได้ปิดยอด",Number(fs.unclosedAmount)||0],["เงินฝากในธนาคาร",Number(fs.bankAmount)||0],["ยอดเงินทั้งหมด",Number(fs.totalAmount)||0],[],d.heads];
   d.rows.forEach(function(r){wsData.push(r);});
   wsData.push([],[d.summary]);
@@ -2289,7 +2332,7 @@ function exportBankCloseExcel(){
 
 function exportBankCloseCSV(){
   var d=bankExportRows(); if(!d)return;
-  var fs=appFinancialSummary||{};
+  var fs=getBankClassFinancialStatus(bankCloseData.className||document.getElementById("bankCloseClass").value);
   var rows=[
     [d.title],
     [d.subtitle],
