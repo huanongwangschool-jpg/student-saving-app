@@ -147,7 +147,7 @@ function initSheets() {
   ]);
   getOrCreateSheet(SHEET_BANK_DEPOSITS, [
     "depositId","month","year","closedAt","closedBy","totalAmount",
-    "totalTransactions","classSummaryJson","note","status","reversedAt","reversedBy","createdAt"
+    "totalTransactions","classSummaryJson","note","status","reversedAt","reversedBy","createdAt","className"
   ]);
   getOrCreateSheet(SHEET_AUDIT_LOGS, [
     "logId","actionType","targetType","targetId","oldValue","newValue","editedBy","editedAt","note"
@@ -528,7 +528,7 @@ function getFinancialSummary() {
 function _bankHeaders() {
   return [
     "depositId","month","year","closedAt","closedBy","totalAmount",
-    "totalTransactions","classSummaryJson","note","status","reversedAt","reversedBy","createdAt"
+    "totalTransactions","classSummaryJson","note","status","reversedAt","reversedBy","createdAt","className"
   ];
 }
 
@@ -579,12 +579,19 @@ function _getUserEmailSafe() {
   try { return Session.getEffectiveUser().getEmail() || ""; } catch(e) { return ""; }
 }
 
-function _monthAlreadyClosed(month, year) {
+function _bankRowClassName(row) {
+  return String(row[13] || "").trim() || "ทั้งโรงเรียน";
+}
+
+function _monthAlreadyClosed(month, year, className) {
   var sh = _getBankSheet();
   var rows = sh.getDataRange().getValues();
+  var cls = String(className || "").trim();
   for (var i = 1; i < rows.length; i++) {
     var status = String(rows[i][9] || "ACTIVE");
-    if (String(rows[i][1]) === String(month) && Number(rows[i][2]) === Number(year) && status === "ACTIVE") {
+    var rowClass = _bankRowClassName(rows[i]);
+    var sameClass = !cls || rowClass === cls || rowClass === "ทั้งโรงเรียน";
+    if (String(rows[i][1]) === String(month) && Number(rows[i][2]) === Number(year) && status === "ACTIVE" && sameClass) {
       return {
         depositId: String(rows[i][0]),
         month: String(rows[i][1]),
@@ -598,7 +605,8 @@ function _monthAlreadyClosed(month, year) {
         status: status,
         reversedAt: rows[i][10] ? String(rows[i][10]) : "",
         reversedBy: String(rows[i][11] || ""),
-        createdAt: rows[i][12] ? String(rows[i][12]) : ""
+        createdAt: rows[i][12] ? String(rows[i][12]) : "",
+        className: rowClass
       };
     }
   }
@@ -610,9 +618,11 @@ function getMonthlyBankDepositSummary(dataJson) {
     var data = JSON.parse(dataJson || "{}");
     var month = String(data.month || "").padStart(2, "0");
     var year = Number(data.year) || (new Date().getFullYear() + 543);
+    var className = String(data.className || "").trim();
     if (!month || month === "00") return JSON.stringify({success:false,error:"กรุณาเลือกเดือน"});
+    if (!className || CLASSES.indexOf(className) < 0) return JSON.stringify({success:false,error:"กรุณาเลือกชั้นเรียน"});
 
-    var closed = _monthAlreadyClosed(month, year);
+    var closed = _monthAlreadyClosed(month, year, className);
     var gregYear = year > 2400 ? year - 543 : year;
     var stuRows = getOrCreateSheet(SHEET_STUDENTS).getDataRange().getValues();
     var studentClass = {};
@@ -630,6 +640,7 @@ function getMonthlyBankDepositSummary(dataJson) {
       if (d.getFullYear() !== gregYear || d.getMonth() + 1 !== Number(month)) continue;
       var amt = Number(r[4]) || 0;
       var cls = studentClass[String(r[1])] || "ไม่ระบุชั้น";
+      if (cls !== className) continue;
       if (!classMap[cls]) classMap[cls] = {className:cls,totalAmount:0,totalTransactions:0};
       classMap[cls].totalAmount += amt;
       classMap[cls].totalTransactions++;
@@ -644,6 +655,7 @@ function getMonthlyBankDepositSummary(dataJson) {
       success:true,
       month:month,
       year:year,
+      className:className,
       closed:!!closed,
       existing:closed,
       closedAt:new Date().toISOString(),
@@ -660,12 +672,14 @@ function saveMonthlyBankDeposit(dataJson) {
     var data = JSON.parse(dataJson || "{}");
     var month = String(data.month || "").padStart(2, "0");
     var year = Number(data.year) || (new Date().getFullYear() + 543);
+    var className = String(data.className || "").trim();
     var note = String(data.note || "");
     if (!month || month === "00") return JSON.stringify({success:false,error:"กรุณาเลือกเดือน"});
-    var closed = _monthAlreadyClosed(month, year);
-    if (closed) return JSON.stringify({success:false,duplicate:true,error:"เดือนนี้ถูกปิดยอดแล้ว",existing:closed});
+    if (!className || CLASSES.indexOf(className) < 0) return JSON.stringify({success:false,error:"กรุณาเลือกชั้นเรียน"});
+    var closed = _monthAlreadyClosed(month, year, className);
+    if (closed) return JSON.stringify({success:false,duplicate:true,error:"ชั้นเรียนนี้ถูกปิดยอดเดือนนี้แล้ว",existing:closed});
 
-    var summaryRes = JSON.parse(getMonthlyBankDepositSummary(JSON.stringify({month:month,year:year})));
+    var summaryRes = JSON.parse(getMonthlyBankDepositSummary(JSON.stringify({month:month,year:year,className:className})));
     if (!summaryRes.success) return JSON.stringify(summaryRes);
     var closedBy = String(data.closedBy || "").trim();
     if (!closedBy) return JSON.stringify({success:false,error:"กรุณากรอกชื่อผู้ดำเนินการ"});
@@ -675,19 +689,20 @@ function saveMonthlyBankDeposit(dataJson) {
     sh.appendRow([
       id, month, year, now, closedBy, Number(summaryRes.totalAmount) || 0,
       Number(summaryRes.totalTransactions) || 0,
-      JSON.stringify(summaryRes.classSummary || []), note, "ACTIVE", "", "", now
+      JSON.stringify(summaryRes.classSummary || []), note, "ACTIVE", "", "", now, className
     ]);
     writeAudit("MONTHLY_BANK_DEPOSIT",
-      "ปิดยอดนำฝากธนาคาร เดือน "+month+"/"+year+" จำนวน ฿"+Number(summaryRes.totalAmount||0).toLocaleString()+" รายการ "+summaryRes.totalTransactions,
+      "ปิดยอดนำฝากธนาคาร ชั้น "+className+" เดือน "+month+"/"+year+" จำนวน ฿"+Number(summaryRes.totalAmount||0).toLocaleString()+" รายการ "+summaryRes.totalTransactions,
       id);
     writeAuditLog("MONTHLY_BANK_DEPOSIT","MonthlyBankDeposit",id,"",
-      {month:month,year:year,totalAmount:summaryRes.totalAmount,totalTransactions:summaryRes.totalTransactions,status:"ACTIVE"},
+      {month:month,year:year,className:className,totalAmount:summaryRes.totalAmount,totalTransactions:summaryRes.totalTransactions,status:"ACTIVE"},
       closedBy,note);
     return JSON.stringify({
       success:true,
       depositId:id,
       month:month,
       year:year,
+      className:className,
       closedAt:now,
       closedBy:closedBy,
       totalAmount:summaryRes.totalAmount,
@@ -713,6 +728,7 @@ function getMonthlyBankDeposits() {
       try { summary = JSON.parse(String(r[7] || "[]")); } catch(e) {}
       data.push({
         depositId:String(r[0]), month:String(r[1]), year:Number(r[2])||0,
+        className:_bankRowClassName(r),
         closedAt:r[3]?String(r[3]):"", closedBy:String(r[4]||""),
         totalAmount:Number(r[5])||0, totalTransactions:Number(r[6])||0,
         classSummary:summary, classSummaryJson:String(r[7]||"[]"),
@@ -770,7 +786,7 @@ function getAuditLogs(dataJson) {
 
 function getRealBalanceSummary() {
   try {
-    var closed = {};
+    var closedAll = {}, closedClass = {};
     var bank = 0;
     var bankRows = _getBankSheet().getDataRange().getValues();
     for (var b=1;b<bankRows.length;b++) {
@@ -778,18 +794,37 @@ function getRealBalanceSummary() {
       var st=String(br[9]||"ACTIVE");
       if(st!=="ACTIVE") continue;
       var key=String(br[2])+"-"+String(br[1]).padStart(2,"0");
-      closed[key]=true;
+      var rowClass = _bankRowClassName(br);
+      if (rowClass === "ทั้งโรงเรียน") closedAll[key]=true;
+      else closedClass[key+"|"+rowClass]=true;
       bank += Number(br[5])||0;
     }
-    var unclosed = 0, unclosedTx = 0;
+    var stuRows = getOrCreateSheet(SHEET_STUDENTS).getDataRange().getValues();
+    var studentClass = {};
+    for (var s=1;s<stuRows.length;s++) {
+      if (stuRows[s][0]) studentClass[String(stuRows[s][0])] = String(stuRows[s][2] || "ไม่ระบุชั้น");
+    }
+    var unclosed = 0, unclosedTx = 0, classMap = {};
     var txRows = getOrCreateSheet(SHEET_TX).getDataRange().getValues();
     for (var i=1;i<txRows.length;i++) {
       var r=txRows[i]; if(!r[0] || String(r[2])!=="DEPOSIT") continue;
       var d=_parseTxDate(r[3]); if(!d) continue;
       var y=d.getFullYear()+543, m=String(d.getMonth()+1).padStart(2,"0");
-      if(!closed[y+"-"+m]) { unclosed += Number(r[4])||0; unclosedTx++; }
+      var ym = y+"-"+m;
+      var cls = studentClass[String(r[1])] || "ไม่ระบุชั้น";
+      if(!closedAll[ym] && !closedClass[ym+"|"+cls]) {
+        var amt = Number(r[4])||0;
+        unclosed += amt;
+        unclosedTx++;
+        if (!classMap[cls]) classMap[cls] = {className:cls,amount:0,transactions:0};
+        classMap[cls].amount += amt;
+        classMap[cls].transactions++;
+      }
     }
-    return JSON.stringify({success:true,unclosedAmount:unclosed,bankAmount:bank,totalAmount:unclosed+bank,unclosedTransactions:unclosedTx});
+    var classUnclosedSummary = [];
+    for (var c in classMap) classUnclosedSummary.push(classMap[c]);
+    classUnclosedSummary.sort(function(a,b){ return CLASSES.indexOf(a.className)-CLASSES.indexOf(b.className); });
+    return JSON.stringify({success:true,unclosedAmount:unclosed,bankAmount:bank,totalAmount:unclosed+bank,unclosedTransactions:unclosedTx,classUnclosedSummary:classUnclosedSummary});
   } catch(e) { return JSON.stringify({success:false,error:e.message}); }
 }
 
