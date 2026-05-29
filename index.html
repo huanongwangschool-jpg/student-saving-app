@@ -250,7 +250,7 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
   <div class="nav-inner">
     <button class="nav-btn active" onclick="switchPage('dashboard',this)"><i class="fa-solid fa-gauge-high"></i>Dashboard</button>
     <button class="nav-btn" onclick="switchPage('transactions',this)"><i class="fa-solid fa-coins"></i>ฝากเงิน</button>
-    <button class="nav-btn" onclick="switchPage('reports',this)"><i class="fa-solid fa-chart-line"></i>รายงาน</button>
+    <button class="nav-btn" onclick="switchPage('export',this)"><i class="fa-solid fa-chart-line"></i>รายงาน</button>
     <button class="nav-btn" onclick="switchPage('monthclose',this)"><i class="fa-solid fa-building-columns"></i>ปิดยอดสิ้นเดือน</button>
     <button class="nav-btn admin-only" onclick="switchPage('settings',this)" style="display:none"><i class="fa-solid fa-gear"></i>ตั้งค่า</button>
   </div>
@@ -262,10 +262,10 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
 <section class="page active" id="page-dashboard">
   <div class="sec-title"><i class="fa-solid fa-gauge-high"></i>ภาพรวมระบบออมทรัพย์</div>
   <div class="stats-grid">
-    <div class="stat-card"><div class="stat-icon sky"><i class="fa-solid fa-sack-dollar"></i></div><div><div class="stat-label">ยอดออมสุทธิรวม</div><div class="stat-value money" id="grandTotal">-</div><div class="stat-sub">บาท</div></div></div>
-    <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-arrow-up"></i></div><div><div class="stat-label">ยอดฝากรวม</div><div class="stat-value" id="totalDeposit">-</div><div class="stat-sub">บาท</div></div></div>
-    <div class="stat-card"><div class="stat-icon red"><i class="fa-solid fa-arrow-down"></i></div><div><div class="stat-label">ยอดถอนรวม</div><div class="stat-value money-neg" id="totalWithdraw">-</div><div class="stat-sub">บาท</div></div></div>
-    <div class="stat-card"><div class="stat-icon teal"><i class="fa-solid fa-graduation-cap"></i></div><div><div class="stat-label">นักเรียน (active)</div><div class="stat-value" id="studentCount">-</div><div class="stat-sub">คน</div></div></div>
+    <div class="stat-card" style="display:none"><div class="stat-icon sky"><i class="fa-solid fa-sack-dollar"></i></div><div><div class="stat-label">ยอดออมสุทธิรวม</div><div class="stat-value money" id="grandTotal">-</div><div class="stat-sub">บาท</div></div></div>
+    <div class="stat-card" style="display:none"><div class="stat-icon green"><i class="fa-solid fa-arrow-up"></i></div><div><div class="stat-label">ยอดฝากรวม</div><div class="stat-value" id="totalDeposit">-</div><div class="stat-sub">บาท</div></div></div>
+    <div class="stat-card" style="display:none"><div class="stat-icon red"><i class="fa-solid fa-arrow-down"></i></div><div><div class="stat-label">ยอดถอนรวม</div><div class="stat-value money-neg" id="totalWithdraw">-</div><div class="stat-sub">บาท</div></div></div>
+    <div class="stat-card" style="display:none"><div class="stat-icon teal"><i class="fa-solid fa-graduation-cap"></i></div><div><div class="stat-label">นักเรียน (active)</div><div class="stat-value" id="studentCount">-</div><div class="stat-sub">คน</div></div></div>
     <div class="stat-card"><div class="stat-icon amber"><i class="fa-solid fa-wallet"></i></div><div><div class="stat-label">เงินคงเหลือที่ยังไม่ได้ปิดยอด</div><div class="stat-value money" id="unclosedCash">-</div><div class="stat-sub">บาท</div></div></div>
     <div class="stat-card"><div class="stat-icon purple"><i class="fa-solid fa-building-columns"></i></div><div><div class="stat-label">เงินฝากในธนาคาร</div><div class="stat-value money" id="bankCash">-</div><div class="stat-sub">บาท</div></div></div>
     <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-scale-balanced"></i></div><div><div class="stat-label">ยอดเงินทั้งหมด</div><div class="stat-value money" id="realTotalCash">-</div><div class="stat-sub">บาท</div></div></div>
@@ -279,6 +279,17 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
   <div class="grid-2">
     <div class="card"><div class="card-title"><i class="fa-solid fa-chart-bar"></i>ยอดออมสุทธิแยกชั้น</div><div class="chart-wrap"><canvas id="classChart"></canvas></div></div>
     <div class="card"><div class="card-title"><i class="fa-solid fa-chart-line"></i>แนวโน้มฝากเงินรายเดือน</div><div class="chart-wrap"><canvas id="monthlyChart"></canvas></div></div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title"><i class="fa-solid fa-ranking-star"></i>Top 10 ยอดออมสูงสุด</div>
+      <div class="table-wrap"><table><thead><tr><th>อันดับ</th><th>ชื่อ</th><th>ชั้น</th><th>ยอดคงเหลือ</th></tr></thead>
+      <tbody id="dashboardTopStudentsBody"></tbody></table></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><i class="fa-solid fa-chart-pie"></i>สัดส่วนยอดออมแต่ละชั้น</div>
+      <div class="chart-wrap"><canvas id="dashboardPieChart"></canvas></div>
+    </div>
   </div>
 </section>
 
@@ -471,7 +482,7 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
 
 <!-- ══════════ EXPORT ══════════ -->
 <section class="page" id="page-export">
-  <div class="sec-title"><i class="fa-solid fa-file-export"></i>Export รายงาน</div>
+  <div class="sec-title"><i class="fa-solid fa-chart-line"></i>รายงาน</div>
   <div class="summary-strip">
     <div class="summary-box"><div class="label">เงินคงเหลือที่ยังไม่ได้ปิดยอด</div><div class="value money" id="exportUnclosedCash">-</div></div>
     <div class="summary-box"><div class="label">เงินฝากในธนาคาร</div><div class="value money" id="exportBankCash">-</div></div>
@@ -493,8 +504,14 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
     <div class="form-row">
       <div class="form-group export-filter-group" id="exportClassGroup">
         <label>ชั้นเรียน</label>
-        <select id="exportClass">
+        <select id="exportClass" onchange="onExportClassChange()">
           <option value="">ทุกชั้นเรียน</option>
+        </select>
+      </div>
+      <div class="form-group export-filter-group" id="exportStudentGroup">
+        <label>นักเรียน</label>
+        <select id="exportStudent" onchange="maybeAutoPreviewExport()">
+          <option value="">เลือกนักเรียน</option>
         </select>
       </div>
       <div class="form-group" style="display:none">
@@ -514,18 +531,24 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
       </div>
       <div class="form-group export-filter-group" id="exportExactDateGroup">
         <label>วันที่</label>
-        <input type="date" id="exportExactDate">
+        <input type="date" id="exportExactDate" onchange="maybeAutoPreviewExport()">
       </div>
       <div class="form-group export-filter-group" id="exportYearGroup">
         <label>ปี พ.ศ.</label>
-        <input type="number" id="exportYear" placeholder="2568" min="2560" max="2600">
+        <input type="number" id="exportYear" placeholder="2568" min="2560" max="2600" onchange="maybeAutoPreviewExport()">
       </div>
       <div class="form-group export-filter-group" id="exportMonthFilterGroup">
         <label>เดือน</label>
-        <select id="exportMonthFilter"></select>
+        <select id="exportMonthFilter" onchange="maybeAutoPreviewExport()"></select>
       </div>
     </div>
-    <button class="btn btn-primary" onclick="previewExport()"><i class="fa-solid fa-eye"></i>แสดงตัวอย่าง</button>
+    <div class="form-group export-filter-group" id="exportClassCardGroup">
+      <label>เลือกชั้นเรียน</label>
+      <div class="class-grid" id="exportClassGrid"></div>
+      <div class="info-box" id="exportClassRequiredBox"><i class="fa-solid fa-circle-info"></i><div>กรุณาเลือกชั้นเรียนก่อน</div></div>
+    </div>
+    <div id="exportClassSummaryPanel" style="display:none"></div>
+    <button class="btn btn-primary" id="exportPreviewBtn" onclick="previewExport()"><i class="fa-solid fa-eye"></i>แสดงตัวอย่าง</button>
   </div>
 
   <!-- Preview Table -->
@@ -695,10 +718,7 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
 <!-- ══════════ REPORTS ══════════ -->
 <section class="page" id="page-reports">
   <div class="sec-title"><i class="fa-solid fa-chart-line"></i>รายงานสรุป</div>
-  <div class="subnav-row">
-    <button class="btn btn-primary btn-sm" onclick="switchPage('export')"><i class="fa-solid fa-file-export"></i>รายงาน Export PDF/Excel/CSV</button>
-    <button class="btn btn-teal btn-sm" onclick="switchPage('byclass')"><i class="fa-solid fa-layer-group"></i>รายงานแยกชั้น</button>
-  </div>
+  <div class="info-box"><i class="fa-solid fa-circle-info"></i><div>หน้ารายงานหลักถูกรวมไว้ในเมนู “รายงาน” แล้ว</div></div>
   <div class="summary-strip">
     <div class="summary-box"><div class="label">เงินคงเหลือที่ยังไม่ได้ปิดยอด</div><div class="value money" id="reportUnclosedCash">-</div></div>
     <div class="summary-box"><div class="label">เงินฝากในธนาคาร</div><div class="value money" id="reportBankCash">-</div></div>
@@ -1049,7 +1069,7 @@ function switchPage(name,btn){
   if(name==="import")     initStudentImport();
   if(name==="promote")    {loadPromoYearDefault();renderPromoHistory();}
   if(name==="audit")      loadAuditLog();
-  if(name==="export")     {populateExportSelects();refreshRealBalanceCards();}
+  if(name==="export")     {populateExportSelects();refreshRealBalanceCards();maybeAutoPreviewExport();}
   if(name==="monthclose") {initBankCloseDefaults();loadBankCloseHistory();}
   if(name==="settings")   refreshSettings();
 }
@@ -1086,6 +1106,8 @@ function populateExportSelects(){
       return '<option value="'+String(i+1).padStart(2,"0")+'">'+name+'</option>';
     }).join("");
   }
+  populateExportStudentSelect();
+  renderExportClassGrid();
   onExportTypeChange();
   if(!appBankDeposits.length) loadBankCloseHistory();
 }
@@ -1099,19 +1121,107 @@ function selectExportReportType(type,btn){
   var preview=document.getElementById("exportPreviewCard");
   if(preview) preview.style.display="none";
   onExportTypeChange();
+  maybeAutoPreviewExport();
 }
 function onExportTypeChange(){
   var t=document.getElementById("exportType").value;
   var showClass = t==="daily" || t==="monthly" || t==="student";
+  var showStudent = t==="student";
+  var showClassCards = t==="class";
   var showExactDate = t==="daily";
   var showPeriod = t==="overview" || t==="daily" || t==="monthly" || t==="class" || t==="student" || t==="bank";
   document.getElementById("exportClassGroup").style.display=showClass?"":"none";
+  document.getElementById("exportStudentGroup").style.display=showStudent?"":"none";
+  document.getElementById("exportClassCardGroup").style.display=showClassCards?"":"none";
   document.getElementById("exportDateGroup").style.display="none";
   document.getElementById("exportExactDateGroup").style.display=showExactDate?"":"none";
   document.getElementById("exportYearGroup").style.display=showPeriod?"":"none";
   document.getElementById("exportMonthFilterGroup").style.display=showPeriod?"":"none";
-  if(!showClass) document.getElementById("exportClass").value="";
+  document.getElementById("exportPreviewBtn").style.display="none";
+  if(!showClass&&!showClassCards) document.getElementById("exportClass").value="";
+  if(!showStudent) document.getElementById("exportStudent").value="";
   if(!showExactDate) document.getElementById("exportExactDate").value="";
+  renderExportClassGrid();
+  renderExportClassSummaryPanel();
+}
+function populateExportStudentSelect(){
+  var sel=document.getElementById("exportStudent");
+  if(!sel)return;
+  var cls=document.getElementById("exportClass").value;
+  if(!cls){
+    sel.innerHTML='<option value="">เลือกชั้นเรียนก่อน</option>';
+    return;
+  }
+  var list=appStudents.filter(function(s){return s.status==="active"&&(cls?s.className===cls:true);})
+    .sort(function(a,b){return CLASSES.indexOf(a.className)-CLASSES.indexOf(b.className)||(Number(a.number)||0)-(Number(b.number)||0);});
+  sel.innerHTML='<option value="">เลือกนักเรียน</option>'+list.map(function(s){
+    return '<option value="'+s.id+'">'+s.className+' เลขที่ '+(s.number||"-")+' '+escapeHtml(s.name)+'</option>';
+  }).join("");
+}
+function onExportClassChange(){
+  populateExportStudentSelect();
+  maybeAutoPreviewExport();
+}
+function renderExportClassGrid(){
+  var grid=document.getElementById("exportClassGrid");
+  if(!grid)return;
+  var selected=document.getElementById("exportClass").value;
+  grid.innerHTML=CLASSES.map(function(c){
+    var cnt=appStudents.filter(function(s){return s.status==="active"&&s.className===c;}).length;
+    var fin=getBankClassFinancialStatus(c);
+    return '<div class="class-badge '+(selected===c?'active':'')+'" onclick="selectExportClassCard(\''+c+'\',this)">'
+      +'<div class="class-badge-name">'+c+'</div>'
+      +'<div class="class-badge-total">'+cnt+' คน</div>'
+      +'<div class="class-badge-total">คงเหลือ ฿'+fmt(fin.unclosedAmount)+'</div>'
+      +'</div>';
+  }).join("");
+}
+function selectExportClassCard(cls,card){
+  document.getElementById("exportClass").value=cls;
+  document.querySelectorAll("#exportClassGrid .class-badge").forEach(function(b){b.classList.remove("active");});
+  if(card)card.classList.add("active");
+  renderExportClassSummaryPanel();
+  maybeAutoPreviewExport();
+}
+function renderExportClassSummaryPanel(){
+  var panel=document.getElementById("exportClassSummaryPanel");
+  if(!panel)return;
+  var type=document.getElementById("exportType").value;
+  var cls=document.getElementById("exportClass").value;
+  if(type!=="class"||!cls){panel.style.display="none";return;}
+  var students=appStudents.filter(function(s){return s.status==="active"&&s.className===cls;});
+  var fin=getBankClassFinancialStatus(cls);
+  var txCount=appTx.filter(function(t){var s=getStudentById(t.studentId);return s&&s.className===cls&&t.type==="DEPOSIT";}).length;
+  var allRows=CLASSES.map(function(c){
+    var f=getBankClassFinancialStatus(c);
+    return '<tr><td><span class="badge badge-sky">'+c+'</span></td><td><span class="money">฿'+fmt(f.unclosedAmount)+'</span></td><td><span class="money">฿'+fmt(f.bankAmount)+'</span></td><td><span class="money">฿'+fmt(f.totalAmount)+'</span></td></tr>';
+  }).join("");
+  panel.style.display="block";
+  panel.innerHTML='<div class="summary-strip" style="margin-top:12px">'
+    +'<div class="summary-box"><div class="label">จำนวนนักเรียน</div><div class="value">'+students.length+' คน</div></div>'
+    +'<div class="summary-box"><div class="label">เงินคงเหลือที่ยังไม่ได้ปิดยอด</div><div class="value money">฿'+fmt(fin.unclosedAmount)+'</div></div>'
+    +'<div class="summary-box"><div class="label">เงินฝากในธนาคาร</div><div class="value money">฿'+fmt(fin.bankAmount)+'</div></div>'
+    +'<div class="summary-box"><div class="label">ยอดเงินทั้งหมด</div><div class="value money">฿'+fmt(fin.totalAmount)+'</div></div>'
+    +'<div class="summary-box"><div class="label">จำนวนรายการฝาก</div><div class="value">'+txCount+' รายการ</div></div>'
+    +'</div>'
+    +'<div class="card" style="margin-top:12px"><div class="card-title"><i class="fa-solid fa-table"></i>ยอดเงินรายชั้นทั้งโรงเรียน</div>'
+    +'<div class="table-wrap"><table><thead><tr><th>ชั้นเรียน</th><th>เงินคงเหลือ</th><th>เงินฝากธนาคาร</th><th>ยอดรวม</th></tr></thead><tbody>'+allRows+'</tbody></table></div></div>';
+}
+function isExportReady(){
+  var type=document.getElementById("exportType").value;
+  if(type==="class"&&!document.getElementById("exportClass").value)return false;
+  if(type==="student"&&(!document.getElementById("exportClass").value||!document.getElementById("exportStudent").value))return false;
+  return true;
+}
+function maybeAutoPreviewExport(){
+  renderExportClassSummaryPanel();
+  if(!isExportReady()){
+    exportRows=[];
+    var preview=document.getElementById("exportPreviewCard");
+    if(preview)preview.style.display="none";
+    return;
+  }
+  previewExport(true);
 }
 
 function filterStudentsForTx(prefix){
@@ -1134,7 +1244,7 @@ function updateBalDisp(prefix){
 // ══════════════════════════════════════════════════════════
 // DASHBOARD
 // ══════════════════════════════════════════════════════════
-var classChartI=null,monthlyChartI=null;
+var classChartI=null,monthlyChartI=null,dashboardPieChartI=null;
 function refreshDashboard(){
   var dep=0,wdr=0;
   appTx.forEach(function(t){if(t.type==="DEPOSIT")dep+=t.amount;else wdr+=t.amount;});
@@ -1150,7 +1260,26 @@ function refreshDashboard(){
   var mKeys=Object.keys(mMap).sort();
   if(monthlyChartI)monthlyChartI.destroy();
   monthlyChartI=new Chart(document.getElementById("monthlyChart"),{type:"line",data:{labels:mKeys.map(function(k){var p=k.split("-");return new Date(p[0],p[1]-1).toLocaleDateString("th-TH",{year:"numeric",month:"short"});}),datasets:[{label:"ฝากเงิน",data:mKeys.map(function(k){return mMap[k];}),borderColor:"#0ea5e9",backgroundColor:"rgba(14,165,233,.12)",fill:true,tension:.45,pointBackgroundColor:"#0ea5e9",pointRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return "฿"+fmt(c.raw);}}}},scales:{y:{ticks:{callback:function(v){return "฿"+v.toLocaleString();}},grid:{color:"#f1f5f9"}},x:{grid:{display:false}}}}});
+  renderDashboardTopStudents();
+  renderDashboardPieChart();
   refreshRealBalanceCards();
+}
+
+function renderDashboardTopStudents(){
+  var el=document.getElementById("dashboardTopStudentsBody");
+  if(!el)return;
+  var ranked=appStudents.filter(function(s){return s.status==="active";}).map(function(s){return {name:s.name,cls:s.className,bal:getBalance(s.id)};}).sort(function(a,b){return b.bal-a.bal;}).slice(0,10);
+  el.innerHTML=ranked.length?ranked.map(function(s,i){return '<tr><td>'+(i+1)+'</td><td>'+escapeHtml(s.name)+'</td><td><span class="badge badge-green">'+escapeHtml(s.cls)+'</span></td><td><span class="money">฿'+fmt(s.bal)+'</span></td></tr>';}).join(""):'<tr><td colspan="4" class="no-data">ไม่มีข้อมูล</td></tr>';
+}
+
+function renderDashboardPieChart(){
+  var canvas=document.getElementById("dashboardPieChart");
+  if(!canvas)return;
+  var valid=CLASSES.filter(function(c){return getClassBalance(c)>0;});
+  var vals=valid.map(function(c){return getClassBalance(c);});
+  var colors=["#0ea5e9","#22c55e","#fbbf24","#f472b6","#a855f7","#06b6d4","#f97316","#84cc16","#6366f1","#14b8a6","#ef4444"];
+  if(dashboardPieChartI)dashboardPieChartI.destroy();
+  dashboardPieChartI=new Chart(canvas,{type:"doughnut",data:{labels:valid,datasets:[{data:vals,backgroundColor:colors.slice(0,valid.length),borderWidth:2,borderColor:"#fff"}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"right",labels:{font:{family:"Sarabun",size:12}}},tooltip:{callbacks:{label:function(c){return c.label+": ฿"+fmt(c.raw);}}}}}});
 }
 
 function refreshRealBalanceCards(){
@@ -1635,6 +1764,7 @@ document.addEventListener("change", function(e){
   if(e.target && (e.target.id==="exportMonthFilter" || e.target.id==="exportYear")){
     var exact=document.getElementById("exportExactDate");
     if(exact) exact.value="";
+    maybeAutoPreviewExport();
   }
 });
 
@@ -1662,13 +1792,20 @@ function txInExportPeriod(t,period){
 function buildExportData(){
   var cls   = document.getElementById("exportClass").value;
   var type  = document.getElementById("exportType").value;
+  var selectedStudentId = document.getElementById("exportStudent").value;
   var exactDate = document.getElementById("exportExactDate").value;
   var period = getExportPeriodFilter();
+  if(type==="class"&&!cls){showToast("กรุณาเลือกชั้นเรียนก่อน","error");return null;}
+  if(type==="student"&&!cls){showToast("กรุณาเลือกชั้นเรียนก่อน","error");return null;}
+  if(type==="student"&&!selectedStudentId){showToast("กรุณาเลือกนักเรียนก่อน","error");return null;}
 
   // กรองนักเรียนตามชั้น
   var students = appStudents.filter(function(s){
     return s.status==="active"&&(cls?s.className===cls:true);
   });
+  if(type==="student"&&selectedStudentId){
+    students=students.filter(function(s){return s.id===selectedStudentId;});
+  }
   var stuIds = students.map(function(s){return s.id;});
 
   // กรอง tx
@@ -1774,12 +1911,13 @@ function buildExportData(){
     });
     var tDep=txYear.filter(function(t){return t.type==="DEPOSIT";}).reduce(function(a,t){return a+t.amount;},0);
     var tWdr=txYear.filter(function(t){return t.type==="WITHDRAW";}).reduce(function(a,t){return a+t.amount;},0);
+    var monthlyFs=cls?getBankClassFinancialStatus(cls):(appFinancialSummary||{});
     return {
       title: "สรุปการออมรายเดือน — "+clsLabel,
       subtitle: schoolName+" | "+period.label,
       heads: ["เดือน","จำนวนรายการ","ยอดฝาก (บาท)","ยอดถอน (บาท)","ยอดสุทธิ (บาท)"],
       rows: mrows,
-      summary: "รวมทั้งหมด: ฝาก ฿"+fmt(tDep)+" | ถอน ฿"+fmt(tWdr)+" | สุทธิ ฿"+fmt(tDep-tWdr),
+      summary: "สรุปประจำเดือน: ฝากรวม ฿"+fmt(tDep)+" | ถอนรวม ฿"+fmt(tWdr)+" | สุทธิ ฿"+fmt(tDep-tWdr)+" | จำนวนรายการ "+txYear.length+" รายการ | เงินฝากธนาคาร ฿"+fmt(Number(monthlyFs.bankAmount)||0)+" | เงินคงเหลือ ฿"+fmt(Number(monthlyFs.unclosedAmount)||0),
       moneyColumns: [2,3,4],
       withdrawColumns: [3],
       balanceColumns: [4],
@@ -1956,18 +2094,22 @@ function getExportMoneyColor(data,index){
   return "#16a34a";
 }
 
-function previewExport(){
+function previewExport(silent){
+  if(!isExportReady()){
+    showToast(document.getElementById("exportType").value==="class"?"กรุณาเลือกชั้นเรียนก่อน":"กรุณาเลือกข้อมูลให้ครบก่อน","error");
+    return;
+  }
   if(document.getElementById("exportType").value==="bank"&&!appBankDepositsLoaded){
-    showLoading(true,"กำลังโหลดข้อมูลนำฝากธนาคาร...");
+    if(!silent)showLoading(true,"กำลังโหลดข้อมูลนำฝากธนาคาร...");
     gasCall("getMonthlyBankDeposits")
       .then(function(r){
-        showLoading(false);
+        if(!silent)showLoading(false);
         appBankDepositsLoaded=true;
         appBankDeposits=(r.success&&r.data)?r.data:[];
         renderBankCloseHistory();
-        previewExport();
+        previewExport(silent);
       })
-      .catch(function(e){showLoading(false);appBankDepositsLoaded=true;showToast(String(e.message||e),"error");});
+      .catch(function(e){if(!silent)showLoading(false);appBankDepositsLoaded=true;showToast(String(e.message||e),"error");});
     return;
   }
   var data=buildExportData();
@@ -1986,12 +2128,13 @@ function previewExport(){
   document.getElementById("exportPreviewBody").innerHTML=bodyHtml;
   document.getElementById("exportSummaryRow").textContent=data.summary;
   document.getElementById("exportPreviewCard").style.display="block";
-  showToast("โหลดตัวอย่างสำเร็จ","success");
+  if(!silent)showToast("โหลดตัวอย่างสำเร็จ","success");
 }
 
 // ── Excel Export ──────────────────────────────────────────
 function doExportExcel(){
-  if(!exportRows||!exportRows.rows){showToast("กรุณากด 'แสดงตัวอย่าง' ก่อน","error");return;}
+  if(!isExportReady()){showToast(document.getElementById("exportType").value==="class"?"กรุณาเลือกชั้นเรียนก่อน":"กรุณาเลือกข้อมูลให้ครบก่อน","error");return;}
+  if(!exportRows||!exportRows.rows){showToast("กรุณาเลือกข้อมูลให้ครบก่อน","error");return;}
   var d=exportRows;
   var fs=appFinancialSummary||{};
   var wsData=[["โรงเรียนบ้านหัวหนองแวง(สามัคคีราษฎร์บำรุง)"],[d.title],[d.subtitle],["วันที่พิมพ์",new Date().toLocaleDateString("th-TH",{year:"numeric",month:"long",day:"numeric"})],[]];
@@ -2018,7 +2161,8 @@ function doExportExcel(){
 }
 
 function doExportCSV(){
-  if(!exportRows||!exportRows.rows){showToast("กรุณากด 'แสดงตัวอย่าง' ก่อน","error");return;}
+  if(!isExportReady()){showToast(document.getElementById("exportType").value==="class"?"กรุณาเลือกชั้นเรียนก่อน":"กรุณาเลือกข้อมูลให้ครบก่อน","error");return;}
+  if(!exportRows||!exportRows.rows){showToast("กรุณาเลือกข้อมูลให้ครบก่อน","error");return;}
   var d=exportRows, fs=appFinancialSummary||{};
   var csvData=[
     ["โรงเรียนบ้านหัวหนองแวง(สามัคคีราษฎร์บำรุง)"],
@@ -2072,7 +2216,8 @@ function financialSummaryPdfHtml(summaryOverride){
 }
 
 function doExportPDF(){
-  if(!exportRows||!exportRows.rows){showToast("กรุณากด 'แสดงตัวอย่าง' ก่อน","error");return;}
+  if(!isExportReady()){showToast(document.getElementById("exportType").value==="class"?"กรุณาเลือกชั้นเรียนก่อน":"กรุณาเลือกข้อมูลให้ครบก่อน","error");return;}
+  if(!exportRows||!exportRows.rows){showToast("กรุณาเลือกข้อมูลให้ครบก่อน","error");return;}
   var d=exportRows;
   if(!window.html2canvas){
     showToast("ไม่พบเครื่องมือสร้าง PDF กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่","error");
@@ -2253,6 +2398,8 @@ function loadBankCloseHistory(){
       appBankDeposits=(r.success&&r.data)?r.data:[];
       renderBankCloseHistory();
       renderBankCloseFinancialStatus(bankCloseData);
+      renderExportClassGrid();
+      renderExportClassSummaryPanel();
     })
     .catch(function(){appBankDepositsLoaded=true;document.getElementById("bankCloseHistoryBody").innerHTML='<tr><td colspan="6" class="no-data">โหลดประวัติไม่ได้</td></tr>';});
 }
@@ -2414,6 +2561,7 @@ function refreshAll(){
   if(document.getElementById("page-dashboard").classList.contains("active")) refreshDashboard();
   if(document.getElementById("page-reports").classList.contains("active"))   refreshReports();
   if(document.getElementById("page-byclass").classList.contains("active"))   renderClassGrid();
+  if(document.getElementById("page-export").classList.contains("active"))    {populateExportStudentSelect();renderExportClassGrid();renderExportClassSummaryPanel();maybeAutoPreviewExport();}
 }
 
 // ══════════════════════════════════════════════════════════
