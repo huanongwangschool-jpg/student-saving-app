@@ -558,16 +558,16 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
   <div class="grid-2">
     <div class="card">
       <div class="card-title"><i class="fa-solid fa-calendar-check"></i>เลือกเดือนที่ต้องการปิดยอด</div>
+      <div class="form-group">
+        <label>เลือกชั้นเรียน</label>
+        <div class="class-grid" id="bankCloseClassGrid"></div>
+        <input type="hidden" id="bankCloseClass">
+        <div class="info-box" style="margin-top:10px;margin-bottom:12px"><i class="fa-solid fa-chalkboard-user"></i><div>ชั้นเรียนที่เลือก: <strong id="bankSelectedClassLabel">ยังไม่ได้เลือกชั้นเรียน</strong></div></div>
+      </div>
       <div class="form-row">
         <div class="form-group">
-          <label>ชั้นเรียน</label>
-          <select id="bankCloseClass">
-            <option value="">เลือกชั้นเรียน</option>
-          </select>
-        </div>
-        <div class="form-group">
           <label>เดือน</label>
-          <select id="bankCloseMonth">
+          <select id="bankCloseMonth" onchange="if(document.getElementById('bankCloseClass').value)previewBankClose()">
             <option value="01">มกราคม</option><option value="02">กุมภาพันธ์</option><option value="03">มีนาคม</option>
             <option value="04">เมษายน</option><option value="05">พฤษภาคม</option><option value="06">มิถุนายน</option>
             <option value="07">กรกฎาคม</option><option value="08">สิงหาคม</option><option value="09">กันยายน</option>
@@ -576,7 +576,7 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
         </div>
         <div class="form-group">
           <label>ปี พ.ศ.</label>
-          <input type="number" id="bankCloseYear" min="2560" max="2600">
+          <input type="number" id="bankCloseYear" min="2560" max="2600" onchange="if(document.getElementById('bankCloseClass').value)previewBankClose()">
         </div>
       </div>
       <div class="form-group" style="margin-bottom:12px">
@@ -589,7 +589,7 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
       </div>
       <div class="action-row">
         <button class="btn btn-primary" onclick="previewBankClose()"><i class="fa-solid fa-eye"></i>สรุปยอด</button>
-        <button class="btn btn-green" onclick="saveBankClose()"><i class="fa-solid fa-building-columns"></i>บันทึกการนำฝากเข้าธนาคาร</button>
+        <button class="btn btn-green" id="bankSaveBtn" onclick="saveBankClose()"><i class="fa-solid fa-building-columns"></i>บันทึกการนำฝากเข้าธนาคาร</button>
       </div>
     </div>
 
@@ -856,6 +856,7 @@ var appBankDepositsLoaded = false;
 var bankCloseData = null;
 var exportRows  = [];  // เก็บ data แถวที่ preview ไว้ export
 var appFinancialSummary = {unclosedAmount:0,bankAmount:0,totalAmount:0};
+var classUnclosedMap = {};
 var importPreviewRows = [];
 var teacherContext = {className:"",teacherName:""};
 var adminSession = {isAdmin:false,email:"",token:""};
@@ -1049,7 +1050,7 @@ function switchPage(name,btn){
   if(name==="promote")    {loadPromoYearDefault();renderPromoHistory();}
   if(name==="audit")      loadAuditLog();
   if(name==="export")     {populateExportSelects();refreshRealBalanceCards();}
-  if(name==="monthclose") {initBankCloseDefaults();previewBankClose();loadBankCloseHistory();}
+  if(name==="monthclose") {initBankCloseDefaults();loadBankCloseHistory();}
   if(name==="settings")   refreshSettings();
 }
 function switchTxTab(name,btn){
@@ -1060,7 +1061,7 @@ function switchTxTab(name,btn){
 
 function populateSelects(){
   var all=["newStudentClass","editStudentClass","depClass","wdrClass",
-           "studentClassFilter","txClassFilter","reportClassFilter","promoClassFilter","importClass","bankCloseClass"];
+           "studentClassFilter","txClassFilter","reportClassFilter","promoClassFilter","importClass"];
   all.forEach(function(id){
     var el=document.getElementById(id); if(!el)return;
     var hasAll=["studentClassFilter","txClassFilter","reportClassFilter","promoClassFilter"].indexOf(id)>=0;
@@ -1171,6 +1172,7 @@ function refreshRealBalanceCards(){
         var el=document.getElementById(pair[0]); if(el)el.textContent="฿"+fmt(pair[1]||0);
       });
       renderClassUnclosedSummary(r.classUnclosedSummary||[]);
+      renderBankCloseClassGrid();
     })
     .catch(function(){});
 }
@@ -1180,10 +1182,34 @@ function renderClassUnclosedSummary(list){
   if(!el)return;
   var map={};
   (list||[]).forEach(function(r){map[r.className]={amount:Number(r.amount)||0,transactions:Number(r.transactions)||0};});
+  classUnclosedMap=map;
   el.innerHTML=CLASSES.map(function(c){
     var item=map[c]||{amount:0,transactions:0};
     return '<div class="summary-box"><div class="label">'+c+' | '+item.transactions+' รายการ</div><div class="value money">฿'+fmt(item.amount)+'</div></div>';
   }).join("");
+}
+
+function renderBankCloseClassGrid(){
+  var el=document.getElementById("bankCloseClassGrid");
+  if(!el)return;
+  var selected=document.getElementById("bankCloseClass").value;
+  el.innerHTML=CLASSES.map(function(c){
+    var cnt=appStudents.filter(function(s){return s.status==="active"&&s.className===c;}).length;
+    var item=classUnclosedMap[c]||{amount:0,transactions:0};
+    return '<div class="class-badge '+(selected===c?'active':'')+'" onclick="selectBankCloseClass(\''+c+'\',this)">'
+      +'<div class="class-badge-name">'+c+'</div>'
+      +'<div class="class-badge-total">'+cnt+' คน</div>'
+      +'<div class="class-badge-total">คงเหลือ ฿'+fmt(item.amount)+'</div>'
+      +'</div>';
+  }).join("");
+}
+
+function selectBankCloseClass(cls,card){
+  document.getElementById("bankCloseClass").value=cls;
+  document.getElementById("bankSelectedClassLabel").textContent=cls;
+  document.querySelectorAll("#bankCloseClassGrid .class-badge").forEach(function(b){b.classList.remove("active");});
+  if(card)card.classList.add("active");
+  previewBankClose();
 }
 
 // ══════════════════════════════════════════════════════════
@@ -2090,10 +2116,12 @@ function initBankCloseDefaults(){
   var m=document.getElementById("bankCloseMonth");
   var y=document.getElementById("bankCloseYear");
   var by=document.getElementById("bankClosedByInput");
-  if(cls&&!cls.value&&teacherContext.className)cls.value=teacherContext.className;
   if(m&&!m.value)m.value=String(now.getMonth()+1).padStart(2,"0");
   if(y&&!y.value)y.value=now.getFullYear()+543;
   if(by&&!by.value)by.value=teacherContext.teacherName||adminSession.email||"";
+  var label=document.getElementById("bankSelectedClassLabel");
+  if(label)label.textContent=(cls&&cls.value)||"ยังไม่ได้เลือกชั้นเรียน";
+  renderBankCloseClassGrid();
   refreshRealBalanceCards();
 }
 
@@ -2134,7 +2162,7 @@ function previewBankClose(){
   var className=document.getElementById("bankCloseClass").value;
   var month=document.getElementById("bankCloseMonth").value;
   var year=Number(document.getElementById("bankCloseYear").value)||0;
-  if(!className){showToast("กรุณาเลือกชั้นเรียนก่อนสรุปยอด","error");return;}
+  if(!className){showToast("กรุณาเลือกชั้นเรียนก่อนปิดยอด","error");return;}
   showLoading(true,"กำลังสรุปยอดปิดเดือน...");
   gasCall("getMonthlyBankDepositSummary",JSON.stringify({month:month,year:year,className:className}))
     .then(function(r){
@@ -2154,7 +2182,7 @@ function saveBankClose(){
   var year=Number(document.getElementById("bankCloseYear").value)||0;
   var note=document.getElementById("bankCloseNote").value.trim();
   var closedBy=document.getElementById("bankClosedByInput").value.trim();
-  if(!className){showToast("กรุณาเลือกชั้นเรียนก่อนบันทึกปิดยอด","error");return;}
+  if(!className){showToast("กรุณาเลือกชั้นเรียนก่อนปิดยอด","error");return;}
   if(!closedBy){showToast("กรุณากรอกชื่อผู้ดำเนินการก่อนบันทึกปิดยอด","error");return;}
   showLoading(true,"กำลังบันทึกการนำฝากเข้าธนาคาร...");
   gasCall("saveMonthlyBankDeposit",JSON.stringify({month:month,year:year,className:className,note:note,closedBy:closedBy}))
