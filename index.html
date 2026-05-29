@@ -547,6 +547,7 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
       <div class="class-grid" id="exportClassGrid"></div>
       <div class="info-box" id="exportClassRequiredBox"><i class="fa-solid fa-circle-info"></i><div>กรุณาเลือกชั้นเรียนก่อน</div></div>
     </div>
+    <div class="info-box" id="exportGuideBox"><i class="fa-solid fa-circle-info"></i><div>เลือกประเภทรายงานด้านบน ระบบจะแสดงตัวกรองที่จำเป็นให้โดยอัตโนมัติ</div></div>
     <div id="exportClassSummaryPanel" style="display:none"></div>
     <button class="btn btn-primary" id="exportPreviewBtn" onclick="previewExport()"><i class="fa-solid fa-eye"></i>แสดงตัวอย่าง</button>
   </div>
@@ -1129,7 +1130,7 @@ function onExportTypeChange(){
   var showStudent = t==="student";
   var showClassCards = t==="class";
   var showExactDate = t==="daily";
-  var showPeriod = t==="overview" || t==="daily" || t==="monthly" || t==="class" || t==="student" || t==="bank";
+  var showPeriod = t==="overview" || t==="daily" || t==="monthly" || t==="class" || t==="bank";
   document.getElementById("exportClassGroup").style.display=showClass?"":"none";
   document.getElementById("exportStudentGroup").style.display=showStudent?"":"none";
   document.getElementById("exportClassCardGroup").style.display=showClassCards?"":"none";
@@ -1143,6 +1144,7 @@ function onExportTypeChange(){
   if(!showExactDate) document.getElementById("exportExactDate").value="";
   renderExportClassGrid();
   renderExportClassSummaryPanel();
+  renderExportGuide();
 }
 function populateExportStudentSelect(){
   var sel=document.getElementById("exportStudent");
@@ -1160,6 +1162,7 @@ function populateExportStudentSelect(){
 }
 function onExportClassChange(){
   populateExportStudentSelect();
+  renderExportGuide();
   maybeAutoPreviewExport();
 }
 function renderExportClassGrid(){
@@ -1178,6 +1181,7 @@ function renderExportClassGrid(){
 }
 function selectExportClassCard(cls,card){
   document.getElementById("exportClass").value=cls;
+  populateExportStudentSelect();
   document.querySelectorAll("#exportClassGrid .class-badge").forEach(function(b){b.classList.remove("active");});
   if(card)card.classList.add("active");
   renderExportClassSummaryPanel();
@@ -1207,6 +1211,17 @@ function renderExportClassSummaryPanel(){
     +'<div class="card" style="margin-top:12px"><div class="card-title"><i class="fa-solid fa-table"></i>ยอดเงินรายชั้นทั้งโรงเรียน</div>'
     +'<div class="table-wrap"><table><thead><tr><th>ชั้นเรียน</th><th>เงินคงเหลือ</th><th>เงินฝากธนาคาร</th><th>ยอดรวม</th></tr></thead><tbody>'+allRows+'</tbody></table></div></div>';
 }
+function renderExportGuide(){
+  var box=document.getElementById("exportGuideBox");
+  if(!box)return;
+  var type=document.getElementById("exportType").value;
+  var cls=document.getElementById("exportClass").value;
+  var student=document.getElementById("exportStudent").value;
+  var msg="เลือกประเภทรายงานด้านบน ระบบจะแสดงตัวกรองที่จำเป็นให้โดยอัตโนมัติ";
+  if(type==="class") msg=cls?"เลือกเดือน/ปีเพิ่มเติมได้ ระบบแสดงสรุปรายเดือนของชั้น "+cls+" ให้อัตโนมัติ":"กรุณาเลือกชั้นเรียนจากการ์ด เพื่อดูสรุปรายเดือนและ Export รายงาน";
+  if(type==="student") msg=!cls?"ขั้นตอนที่ 1: เลือกชั้นเรียนก่อน":(!student?"ขั้นตอนที่ 2: เลือกนักเรียนในชั้น "+cls:"ขั้นตอนที่ 3: ตรวจประวัติรายการของนักเรียน แล้ว Export ได้ทันที");
+  box.innerHTML='<i class="fa-solid fa-circle-info"></i><div>'+escapeHtml(msg)+'</div>';
+}
 function isExportReady(){
   var type=document.getElementById("exportType").value;
   if(type==="class"&&!document.getElementById("exportClass").value)return false;
@@ -1214,6 +1229,7 @@ function isExportReady(){
   return true;
 }
 function maybeAutoPreviewExport(){
+  renderExportGuide();
   renderExportClassSummaryPanel();
   if(!isExportReady()){
     exportRows=[];
@@ -1926,48 +1942,58 @@ function buildExportData(){
   }
 
   if(type==="class"){
-    var classRows=CLASSES.map(function(c){
-      var classStudents=students.filter(function(s){return s.className===c;});
-      var ids=classStudents.map(function(s){return s.id;});
-      var txClass=txPeriod.filter(function(t){return ids.indexOf(t.studentId)>=0;});
-      var dep=txClass.filter(function(t){return t.type==="DEPOSIT";}).reduce(function(a,t){return a+(Number(t.amount)||0);},0);
-      var wdr=txClass.filter(function(t){return t.type==="WITHDRAW";}).reduce(function(a,t){return a+(Number(t.amount)||0);},0);
-      return [c,classStudents.length,txClass.length,dep,wdr,dep-wdr];
-    }).filter(function(r){return r[1]||r[2];});
-    var depClassTotal=classRows.reduce(function(a,r){return a+r[3];},0);
-    var wdrClassTotal=classRows.reduce(function(a,r){return a+r[4];},0);
+    var classStudents=students.filter(function(s){return s.className===cls;});
+    var classIds=classStudents.map(function(s){return s.id;});
+    var classTx=txPeriod.filter(function(t){return classIds.indexOf(t.studentId)>=0;});
+    var classMonthMap={};
+    classTx.forEach(function(t){
+      var k=monthKey(t.date);
+      if(!classMonthMap[k])classMonthMap[k]={dep:0,wdr:0,cnt:0};
+      if(t.type==="DEPOSIT")classMonthMap[k].dep+=Number(t.amount)||0;
+      else classMonthMap[k].wdr+=Number(t.amount)||0;
+      classMonthMap[k].cnt++;
+    });
+    var classRows=Object.keys(classMonthMap).sort().map(function(k){
+      var p=k.split("-"),label=new Date(p[0],p[1]-1).toLocaleDateString("th-TH",{year:"numeric",month:"long"});
+      var v=classMonthMap[k];
+      return [label,v.cnt,v.dep,v.wdr,v.dep-v.wdr];
+    });
+    var depClassTotal=classRows.reduce(function(a,r){return a+r[2];},0);
+    var wdrClassTotal=classRows.reduce(function(a,r){return a+r[3];},0);
+    var classFin=getBankClassFinancialStatus(cls);
+    var classDepositTx=classTx.filter(function(t){return t.type==="DEPOSIT";}).length;
     return {
-      title:"รายงานรายชั้น",
+      title:"รายงานรายชั้น — ชั้น "+cls,
       subtitle:schoolName+" | "+period.label,
-      heads:["ชั้นเรียน","จำนวนนักเรียน","จำนวนรายการ","ยอดฝาก (บาท)","ยอดถอน (บาท)","ยอดสุทธิ (บาท)"],
+      heads:["เดือน","จำนวนรายการ","ยอดฝาก (บาท)","ยอดถอน (บาท)","ยอดสุทธิ (บาท)"],
       rows:classRows,
-      summary:"รวม "+classRows.length+" ชั้นเรียน | ฝาก ฿"+fmt(depClassTotal)+" | ถอน ฿"+fmt(wdrClassTotal)+" | สุทธิ ฿"+fmt(depClassTotal-wdrClassTotal),
-      moneyColumns:[3,4,5],
-      withdrawColumns:[4],
-      balanceColumns:[5],
-      filename:"รายงานรายชั้น_"+period.fileKey
+      summary:"ชั้น "+cls+" | นักเรียน "+classStudents.length+" คน | เงินคงเหลือ ฿"+fmt(classFin.unclosedAmount)+" | เงินฝากธนาคาร ฿"+fmt(classFin.bankAmount)+" | ยอดรวม ฿"+fmt(classFin.totalAmount)+" | รายการฝาก "+classDepositTx+" รายการ",
+      moneyColumns:[2,3,4],
+      withdrawColumns:[3],
+      balanceColumns:[4],
+      filename:"รายงานรายชั้น_"+cls+"_"+period.fileKey
     };
   }
 
   if(type==="student"){
-    // รายบุคคล
-    var stuRows=students.sort(sortStudents).map(function(s){
-      var dep=txPeriod.filter(function(t){return t.studentId===s.id&&t.type==="DEPOSIT";}).reduce(function(a,t){return a+t.amount;},0);
-      var wdr=txPeriod.filter(function(t){return t.studentId===s.id&&t.type==="WITHDRAW";}).reduce(function(a,t){return a+t.amount;},0);
-      return [s.number, s.name, s.className, dep, wdr, dep-wdr];
+    var student=students[0]||getStudentById(selectedStudentId);
+    var studentTx=txFiltered.filter(function(t){return t.studentId===selectedStudentId;}).sort(function(a,b){return parseAppDate(a.date)-parseAppDate(b.date)||String(a.createdAt||"").localeCompare(String(b.createdAt||""));});
+    var running=0;
+    var stuRows=studentTx.map(function(t){
+      running+=t.type==="DEPOSIT"?(Number(t.amount)||0):-(Number(t.amount)||0);
+      return [fmtDate(t.date),t.type==="DEPOSIT"?"ฝาก":"ถอน",Number(t.amount)||0,running,t.note||"-"];
     });
-    var tDep2=stuRows.reduce(function(a,r){return a+r[3];},0);
-    var tWdr2=stuRows.reduce(function(a,r){return a+r[4];},0);
+    var tDep2=studentTx.filter(function(t){return t.type==="DEPOSIT";}).reduce(function(a,t){return a+(Number(t.amount)||0);},0);
+    var tWdr2=studentTx.filter(function(t){return t.type==="WITHDRAW";}).reduce(function(a,t){return a+(Number(t.amount)||0);},0);
     return {
-      title: "สรุปยอดออมรายบุคคล — "+clsLabel,
-      subtitle: schoolName+" | "+period.label,
-      heads: ["เลขที่","ชื่อ-นามสกุล","ชั้น","ยอดฝาก (บาท)","ยอดถอน (บาท)","ยอดคงเหลือ (บาท)"],
+      title: "รายงานรายบุคคล — "+student.name,
+      subtitle: schoolName+" | ชั้น "+student.className+" เลขที่ "+(student.number||"-")+" | ประวัติรายการทั้งหมด",
+      heads: ["วันที่","ประเภท","จำนวนเงิน (บาท)","ยอดคงเหลือ (บาท)","หมายเหตุ"],
       rows: stuRows,
-      summary: "รวม "+students.length+" คน | ฝาก ฿"+fmt(tDep2)+" | ถอน ฿"+fmt(tWdr2)+" | สุทธิ ฿"+fmt(tDep2-tWdr2),
-      moneyColumns: [3,4,5],
-      withdrawColumns: [4],
-      balanceColumns: [5],
-      filename: "สรุปรายบุคคล_"+clsLabel+"_"+period.fileKey
+      summary: student.name+" | ฝาก ฿"+fmt(tDep2)+" | ถอน ฿"+fmt(tWdr2)+" | ยอดคงเหลือ ฿"+fmt(tDep2-tWdr2)+" | รายการ "+studentTx.length+" รายการ",
+      moneyColumns: [2,3],
+      balanceColumns: [3],
+      filename: "รายงานรายบุคคล_"+student.name+"_ทั้งหมด"
     };
   }
 
