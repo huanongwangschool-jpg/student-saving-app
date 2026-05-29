@@ -487,7 +487,7 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
           <option value="studentMonthly">รายละเอียดฝาก-ถอนรายบุคคลรายเดือน</option>
         </select>
       </div>
-      <div class="form-group" id="exportDateGroup">
+      <div class="form-group" id="exportDateGroup" style="display:none">
         <label>เดือน-ปี</label>
         <input type="month" id="exportMonth">
       </div>
@@ -495,9 +495,13 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
         <label>วันที่ (ถ้าต้องการเฉพาะวัน)</label>
         <input type="date" id="exportExactDate">
       </div>
-      <div class="form-group" id="exportYearGroup" style="display:none">
+      <div class="form-group" id="exportYearGroup">
         <label>ปี พ.ศ.</label>
         <input type="number" id="exportYear" placeholder="2568" min="2560" max="2600">
+      </div>
+      <div class="form-group" id="exportMonthFilterGroup">
+        <label>เดือน</label>
+        <select id="exportMonthFilter"></select>
       </div>
     </div>
     <button class="btn btn-primary" onclick="previewExport()"><i class="fa-solid fa-eye"></i>แสดงตัวอย่าง</button>
@@ -811,6 +815,7 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
 // STATE & CONSTANTS
 // ══════════════════════════════════════════════════════════
 var CLASSES = ["อ.2","อ.3","ป.1","ป.2","ป.3","ป.4","ป.5","ป.6","ม.1","ม.2","ม.3"];
+var THAI_MONTHS = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
 var NEXT_CLASS = {"อ.2":"อ.3","อ.3":"ป.1","ป.1":"ป.2","ป.2":"ป.3","ป.3":"ป.4","ป.4":"ป.5","ป.5":"ป.6","ป.6":"ม.1","ม.1":"ม.2","ม.2":"ม.3","ม.3":"จบการศึกษา"};
 var STATUS_LABEL = {active:"ปัจจุบัน",transferred:"ย้ายออก",graduated:"จบการศึกษา"};
 var STATUS_BADGE = {active:"badge-green",transferred:"badge-orange",graduated:"badge-teal"};
@@ -1045,14 +1050,20 @@ function populateExportSelects(){
   if(!m.value){var now=new Date();m.value=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0");}
   var y=document.getElementById("exportYear");
   if(!y.value) y.value=new Date().getFullYear()+543;
+  var mf=document.getElementById("exportMonthFilter");
+  if(mf&&!mf.options.length){
+    mf.innerHTML='<option value="">ทั้งปี</option>'+THAI_MONTHS.map(function(name,i){
+      return '<option value="'+String(i+1).padStart(2,"0")+'">'+name+'</option>';
+    }).join("");
+  }
 }
 function onExportTypeChange(){
   var t=document.getElementById("exportType").value;
   var usesMonth = t==="daily" || t==="studentDaily";
-  var usesYear = t==="monthly" || t==="studentMonthly";
-  document.getElementById("exportDateGroup").style.display=usesMonth?"":"none";
+  document.getElementById("exportDateGroup").style.display="none";
   document.getElementById("exportExactDateGroup").style.display=usesMonth?"":"none";
-  document.getElementById("exportYearGroup").style.display=usesYear?"":"none";
+  document.getElementById("exportYearGroup").style.display="";
+  document.getElementById("exportMonthFilterGroup").style.display="";
 }
 
 function filterStudentsForTx(prefix){
@@ -1496,14 +1507,38 @@ function renderAuditStats(){
 // ══════════════════════════════════════════════════════════
 document.addEventListener("change", function(e){
   if(e.target && e.target.id==="exportType") onExportTypeChange();
+  if(e.target && (e.target.id==="exportMonthFilter" || e.target.id==="exportYear")){
+    var exact=document.getElementById("exportExactDate");
+    if(exact) exact.value="";
+  }
 });
+
+function getExportPeriodFilter(){
+  var yearBE=Number(document.getElementById("exportYear").value)||new Date().getFullYear()+543;
+  var monthValue=document.getElementById("exportMonthFilter").value;
+  var yearAD=yearBE>2400?yearBE-543:yearBE;
+  var monthLabel=monthValue?THAI_MONTHS[Number(monthValue)-1]:"ทั้งปี";
+  return {
+    yearBE:yearBE,
+    yearAD:yearAD,
+    month:monthValue,
+    monthKey:monthValue?yearAD+"-"+monthValue:"",
+    label:monthValue?"รายงานเดือน "+monthLabel+" พ.ศ. "+yearBE:"รายงานทั้งปี พ.ศ. "+yearBE,
+    fileKey:monthValue?yearBE+"_"+monthValue:yearBE+"_ทั้งปี"
+  };
+}
+function txInExportPeriod(t,period){
+  var d=parseAppDate(t.date);
+  if(!d) return false;
+  if(d.getFullYear()!==period.yearAD) return false;
+  return !period.month || String(d.getMonth()+1).padStart(2,"0")===period.month;
+}
 
 function buildExportData(){
   var cls   = document.getElementById("exportClass").value;
   var type  = document.getElementById("exportType").value;
-  var month = document.getElementById("exportMonth").value;
   var exactDate = document.getElementById("exportExactDate").value;
-  var year  = Number(document.getElementById("exportYear").value)||0;
+  var period = getExportPeriodFilter();
 
   // กรองนักเรียนตามชั้น
   var students = appStudents.filter(function(s){
@@ -1513,6 +1548,7 @@ function buildExportData(){
 
   // กรอง tx
   var txFiltered = appTx.filter(function(t){return stuIds.indexOf(t.studentId)>=0;});
+  var txPeriod = txFiltered.filter(function(t){return txInExportPeriod(t,period);});
 
   var schoolName = "โรงเรียนบ้านหัวหนองแวง(สามัคคีราษฎร์บำรุง)";
   var clsLabel   = cls||"ทุกชั้นเรียน";
@@ -1534,10 +1570,9 @@ function buildExportData(){
     return monthKey(t.date)===monthValue;
   };
   if(type==="daily"){
-    // รายวันในวันที่หรือเดือนที่เลือก
-    if(!exactDate&&!month){showToast("กรุณาเลือกวันที่หรือเดือน","error");return null;}
+    // รายวันในวันที่เลือก หรือช่วงปี/เดือนที่เลือก
     var txMonth = txFiltered.filter(function(t){
-      return exactDate?isSameDay(t,exactDate):isSameMonth(t,month);
+      return exactDate?isSameDay(t,exactDate):txInExportPeriod(t,period);
     });
     // group by date
     var dayMap={};
@@ -1555,15 +1590,14 @@ function buildExportData(){
     });
     var totalDep=txMonth.filter(function(t){return t.type==="DEPOSIT";}).reduce(function(a,t){return a+t.amount;},0);
     var totalWdr=txMonth.filter(function(t){return t.type==="WITHDRAW";}).reduce(function(a,t){return a+t.amount;},0);
-    var p=month.split("-");
-    var mLabel=exactDate?fmtDate(exactDate):new Date(p[0],p[1]-1).toLocaleDateString("th-TH",{year:"numeric",month:"long"});
-    var filePeriod=exactDate||month;
+    var mLabel=exactDate?"รายงานวันที่ "+fmtDate(exactDate):period.label;
+    var filePeriod=exactDate||period.fileKey;
     return {
       title: "สรุปการออมรายวัน — "+clsLabel,
       subtitle: schoolName+" | "+mLabel,
       heads: ["วันที่","จำนวนรายการ","ยอดฝาก (บาท)","ยอดถอน (บาท)","ยอดสุทธิ (บาท)"],
       rows: rows,
-      summary: (exactDate?"รวมวันที่เลือก":"รวมทั้งเดือน")+": ฝาก ฿"+fmt(totalDep)+" | ถอน ฿"+fmt(totalWdr)+" | สุทธิ ฿"+fmt(totalDep-totalWdr),
+      summary: (exactDate?"รวมวันที่เลือก":(period.month?"รวมเดือนที่เลือก":"รวมทั้งปี"))+": ฝาก ฿"+fmt(totalDep)+" | ถอน ฿"+fmt(totalWdr)+" | สุทธิ ฿"+fmt(totalDep-totalWdr),
       moneyColumns: [2,3,4],
       withdrawColumns: [3],
       balanceColumns: [4],
@@ -1572,14 +1606,8 @@ function buildExportData(){
   }
 
   if(type==="monthly"){
-    // รายเดือนทั้งหมด (ถ้าระบุปี กรองด้วย)
-    var txYear = year
-      ? txFiltered.filter(function(t){
-          var d=parseAppDate(t.date);
-          if(!d) return false;
-          return (d.getFullYear()+543)===year || d.getFullYear()===(year-543);
-        })
-      : txFiltered;
+    // รายเดือนตามปี/เดือนที่เลือก
+    var txYear = txPeriod;
     var monMap={};
     txYear.forEach(function(t){
       var k=monthKey(t.date);
@@ -1598,43 +1626,42 @@ function buildExportData(){
     var tWdr=txYear.filter(function(t){return t.type==="WITHDRAW";}).reduce(function(a,t){return a+t.amount;},0);
     return {
       title: "สรุปการออมรายเดือน — "+clsLabel,
-      subtitle: schoolName+(year?" | ปีการศึกษา "+year:""),
+      subtitle: schoolName+" | "+period.label,
       heads: ["เดือน","จำนวนรายการ","ยอดฝาก (บาท)","ยอดถอน (บาท)","ยอดสุทธิ (บาท)"],
       rows: mrows,
       summary: "รวมทั้งหมด: ฝาก ฿"+fmt(tDep)+" | ถอน ฿"+fmt(tWdr)+" | สุทธิ ฿"+fmt(tDep-tWdr),
       moneyColumns: [2,3,4],
       withdrawColumns: [3],
       balanceColumns: [4],
-      filename: "สรุปรายเดือน_"+clsLabel+(year?"_"+year:"")
+      filename: "สรุปรายเดือน_"+clsLabel+"_"+period.fileKey
     };
   }
 
   if(type==="student"){
     // รายบุคคล
     var stuRows=students.sort(sortStudents).map(function(s){
-      var dep=appTx.filter(function(t){return t.studentId===s.id&&t.type==="DEPOSIT";}).reduce(function(a,t){return a+t.amount;},0);
-      var wdr=appTx.filter(function(t){return t.studentId===s.id&&t.type==="WITHDRAW";}).reduce(function(a,t){return a+t.amount;},0);
+      var dep=txPeriod.filter(function(t){return t.studentId===s.id&&t.type==="DEPOSIT";}).reduce(function(a,t){return a+t.amount;},0);
+      var wdr=txPeriod.filter(function(t){return t.studentId===s.id&&t.type==="WITHDRAW";}).reduce(function(a,t){return a+t.amount;},0);
       return [s.number, s.name, s.className, dep, wdr, dep-wdr];
     });
     var tDep2=stuRows.reduce(function(a,r){return a+r[3];},0);
     var tWdr2=stuRows.reduce(function(a,r){return a+r[4];},0);
     return {
       title: "สรุปยอดออมรายบุคคล — "+clsLabel,
-      subtitle: schoolName,
+      subtitle: schoolName+" | "+period.label,
       heads: ["เลขที่","ชื่อ-นามสกุล","ชั้น","ยอดฝาก (บาท)","ยอดถอน (บาท)","ยอดคงเหลือ (บาท)"],
       rows: stuRows,
       summary: "รวม "+students.length+" คน | ฝาก ฿"+fmt(tDep2)+" | ถอน ฿"+fmt(tWdr2)+" | สุทธิ ฿"+fmt(tDep2-tWdr2),
       moneyColumns: [3,4,5],
       withdrawColumns: [4],
       balanceColumns: [5],
-      filename: "สรุปรายบุคคล_"+clsLabel
+      filename: "สรุปรายบุคคล_"+clsLabel+"_"+period.fileKey
     };
   }
 
   if(type==="studentDaily"){
-    if(!exactDate&&!month){showToast("กรุณาเลือกวันที่หรือเดือน","error");return null;}
     var txMonthDetail=txFiltered.filter(function(t){
-      return exactDate?isSameDay(t,exactDate):isSameMonth(t,month);
+      return exactDate?isSameDay(t,exactDate):txInExportPeriod(t,period);
     });
     var dailyMap={};
     txMonthDetail.forEach(function(t){
@@ -1655,9 +1682,8 @@ function buildExportData(){
     });
     var depTotal=txMonthDetail.filter(function(t){return t.type==="DEPOSIT";}).reduce(function(a,t){return a+(Number(t.amount)||0);},0);
     var wdrTotal=txMonthDetail.filter(function(t){return t.type==="WITHDRAW";}).reduce(function(a,t){return a+(Number(t.amount)||0);},0);
-    var p3=month.split("-");
-    var monthLabel=exactDate?fmtDate(exactDate):new Date(p3[0],p3[1]-1).toLocaleDateString("th-TH",{year:"numeric",month:"long"});
-    var detailPeriod=exactDate||month;
+    var monthLabel=exactDate?"รายงานวันที่ "+fmtDate(exactDate):period.label;
+    var detailPeriod=exactDate||period.fileKey;
     return {
       title: "รายละเอียดการฝาก-ถอนเงินรายบุคคลรายวัน — "+clsLabel,
       subtitle: schoolName+" | "+monthLabel,
@@ -1672,13 +1698,7 @@ function buildExportData(){
   }
 
   if(type==="studentMonthly"){
-    var txYearDetail = year
-      ? txFiltered.filter(function(t){
-          var d=parseAppDate(t.date);
-          if(!d) return false;
-          return (d.getFullYear()+543)===year || d.getFullYear()===(year-543);
-        })
-      : txFiltered;
+    var txYearDetail = txPeriod;
     var monthlyMap={};
     txYearDetail.forEach(function(t){
       var mk=monthKey(t.date);
@@ -1702,14 +1722,14 @@ function buildExportData(){
     var wdrYearTotal=txYearDetail.filter(function(t){return t.type==="WITHDRAW";}).reduce(function(a,t){return a+(Number(t.amount)||0);},0);
     return {
       title: "รายละเอียดการฝาก-ถอนเงินรายบุคคลรายเดือน — "+clsLabel,
-      subtitle: schoolName+(year?" | ปีการศึกษา "+year:""),
+      subtitle: schoolName+" | "+period.label,
       heads: ["เดือน","เลขที่","ชื่อ-นามสกุล","ชั้น","จำนวนครั้ง","ยอดฝาก (บาท)","ยอดถอน (บาท)","เงินคงเหลือ (บาท)","ทำรายการล่าสุด"],
       rows: monthlyRows,
       summary: "รวม "+monthlyRows.length+" แถว | "+txYearDetail.length+" รายการ | ฝาก ฿"+fmt(depYearTotal)+" | ถอน ฿"+fmt(wdrYearTotal)+" | คงเหลือ ฿"+fmt(depYearTotal-wdrYearTotal),
       moneyColumns: [5,6,7],
       withdrawColumns: [6],
       balanceColumns: [7],
-      filename: "รายละเอียดฝากถอนรายบุคคลรายเดือน_"+clsLabel+(year?"_"+year:"")
+      filename: "รายละเอียดฝากถอนรายบุคคลรายเดือน_"+clsLabel+"_"+period.fileKey
     };
   }
   return null;
