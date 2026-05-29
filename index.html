@@ -572,6 +572,7 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
       <table><thead id="exportPreviewHead"></thead><tbody id="exportPreviewBody"></tbody></table>
     </div>
     <div id="exportSummaryRow" style="margin-top:10px;padding:10px 14px;background:var(--green-l);border-radius:9px;font-family:'Prompt',sans-serif;font-weight:700;font-size:14px;color:var(--green-d)"></div>
+    <div id="exportExtraSections"></div>
   </div>
 </section>
 
@@ -1131,13 +1132,13 @@ function onExportTypeChange(){
   var showClassCards = t==="class";
   var showExactDate = t==="daily";
   var showPeriod = t==="overview" || t==="daily" || t==="monthly" || t==="class" || t==="bank";
-  document.getElementById("exportClassGroup").style.display=showClass?"":"none";
-  document.getElementById("exportStudentGroup").style.display=showStudent?"":"none";
-  document.getElementById("exportClassCardGroup").style.display=showClassCards?"":"none";
+  document.getElementById("exportClassGroup").style.display=showClass?"block":"none";
+  document.getElementById("exportStudentGroup").style.display=showStudent?"block":"none";
+  document.getElementById("exportClassCardGroup").style.display=showClassCards?"block":"none";
   document.getElementById("exportDateGroup").style.display="none";
-  document.getElementById("exportExactDateGroup").style.display=showExactDate?"":"none";
-  document.getElementById("exportYearGroup").style.display=showPeriod?"":"none";
-  document.getElementById("exportMonthFilterGroup").style.display=showPeriod?"":"none";
+  document.getElementById("exportExactDateGroup").style.display=showExactDate?"block":"none";
+  document.getElementById("exportYearGroup").style.display=showPeriod?"block":"none";
+  document.getElementById("exportMonthFilterGroup").style.display=showPeriod?"block":"none";
   document.getElementById("exportPreviewBtn").style.display="none";
   if(!showClass&&!showClassCards) document.getElementById("exportClass").value="";
   if(!showStudent) document.getElementById("exportStudent").value="";
@@ -1804,6 +1805,16 @@ function txInExportPeriod(t,period){
   if(d.getFullYear()!==period.yearAD) return false;
   return !period.month || String(d.getMonth()+1).padStart(2,"0")===period.month;
 }
+function buildMonthlyClassComparison(period){
+  return CLASSES.map(function(c){
+    var classStudents=appStudents.filter(function(s){return s.status==="active"&&s.className===c;});
+    var ids=classStudents.map(function(s){return s.id;});
+    var tx=appTx.filter(function(t){return ids.indexOf(t.studentId)>=0&&txInExportPeriod(t,period);});
+    var dep=tx.filter(function(t){return t.type==="DEPOSIT";}).reduce(function(a,t){return a+(Number(t.amount)||0);},0);
+    var wdr=tx.filter(function(t){return t.type==="WITHDRAW";}).reduce(function(a,t){return a+(Number(t.amount)||0);},0);
+    return [c,classStudents.length,dep,wdr,dep-wdr];
+  });
+}
 
 function buildExportData(){
   var cls   = document.getElementById("exportClass").value;
@@ -1937,6 +1948,14 @@ function buildExportData(){
       moneyColumns: [2,3,4],
       withdrawColumns: [3],
       balanceColumns: [4],
+      extraSections:[{
+        title:"ตารางเปรียบเทียบรายชั้น",
+        heads:["ชั้นเรียน","จำนวนคน","ยอดฝาก (บาท)","ยอดถอน (บาท)","ยอดสุทธิ (บาท)"],
+        rows:buildMonthlyClassComparison(period),
+        moneyColumns:[2,3,4],
+        withdrawColumns:[3],
+        balanceColumns:[4]
+      }],
       filename: "สรุปรายเดือน_"+clsLabel+"_"+period.fileKey
     };
   }
@@ -2119,6 +2138,19 @@ function getExportMoneyColor(data,index){
   if(data.balanceColumns&&data.balanceColumns.indexOf(index)>=0) return "#0f766e";
   return "#16a34a";
 }
+function renderExportExtraSections(data){
+  if(!data.extraSections||!data.extraSections.length)return "";
+  return data.extraSections.map(function(sec){
+    var rows=(sec.rows||[]).length?(sec.rows||[]).map(function(r){
+      return '<tr>'+r.map(function(v,i){
+        var isAmt=sec.moneyColumns&&sec.moneyColumns.indexOf(i)>=0&&typeof v==="number";
+        return '<td>'+(isAmt?'<span class="'+getExportMoneyClass(sec,i)+'">฿'+fmt(v)+'</span>':escapeHtml(v))+'</td>';
+      }).join("")+'</tr>';
+    }).join(""):'<tr><td colspan="'+sec.heads.length+'" class="no-data">ไม่มีข้อมูล</td></tr>';
+    return '<div style="margin-top:14px"><div class="card-title"><i class="fa-solid fa-table"></i>'+escapeHtml(sec.title)+'</div>'
+      +'<div class="table-wrap"><table><thead><tr>'+sec.heads.map(function(h){return '<th>'+escapeHtml(h)+'</th>';}).join("")+'</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+  }).join("");
+}
 
 function previewExport(silent){
   if(!isExportReady()){
@@ -2153,6 +2185,7 @@ function previewExport(silent){
   });
   document.getElementById("exportPreviewBody").innerHTML=bodyHtml;
   document.getElementById("exportSummaryRow").textContent=data.summary;
+  document.getElementById("exportExtraSections").innerHTML=renderExportExtraSections(data);
   document.getElementById("exportPreviewCard").style.display="block";
   if(!silent)showToast("โหลดตัวอย่างสำเร็จ","success");
 }
@@ -2172,6 +2205,12 @@ function doExportExcel(){
   d.rows.forEach(function(r){wsData.push(r.map(function(v){return v;}));});
   wsData.push([]);
   wsData.push([d.summary]);
+  (d.extraSections||[]).forEach(function(sec){
+    wsData.push([]);
+    wsData.push([sec.title]);
+    wsData.push(sec.heads);
+    (sec.rows||[]).forEach(function(r){wsData.push(r.map(function(v){return v;}));});
+  });
   var ws=XLSX.utils.aoa_to_sheet(wsData);
   // ปรับความกว้างคอลัมน์อัตโนมัติ
   var colWidths=d.heads.map(function(h,i){
@@ -2205,6 +2244,12 @@ function doExportCSV(){
   d.rows.forEach(function(r){csvData.push(r);});
   csvData.push([]);
   csvData.push([d.summary]);
+  (d.extraSections||[]).forEach(function(sec){
+    csvData.push([]);
+    csvData.push([sec.title]);
+    csvData.push(sec.heads);
+    (sec.rows||[]).forEach(function(r){csvData.push(r);});
+  });
   var ws=XLSX.utils.aoa_to_sheet(csvData);
   var csv=XLSX.utils.sheet_to_csv(ws);
   var blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
@@ -2239,6 +2284,27 @@ function financialSummaryPdfHtml(summaryOverride){
         +'</div>';
     }).join("")
     +'</div>';
+}
+function exportExtraSectionsPdfHtml(data){
+  if(!data.extraSections||!data.extraSections.length)return "";
+  return data.extraSections.map(function(sec){
+    return '<div style="margin-top:16px"><h3 style="font-family:Prompt,Sarabun,sans-serif;font-size:15px;margin:0 0 8px;color:#0f172a">'+escapeHtml(sec.title)+'</h3>'
+      +'<table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:auto"><thead><tr>'
+      +sec.heads.map(function(h){return '<th style="background:#0ea5e9;color:#fff;border:1px solid #bae6fd;padding:7px;text-align:left;white-space:normal">'+escapeHtml(h)+'</th>';}).join("")
+      +'</tr></thead><tbody>'
+      +((sec.rows||[]).length?sec.rows.map(function(r,idx){
+        return '<tr>'+r.map(function(v,i){
+          var isAmt=sec.moneyColumns&&sec.moneyColumns.indexOf(i)>=0&&typeof v==="number";
+          var text=isAmt?"฿"+fmt(v):v;
+          var bg=idx%2?'#fff':'#f0f9ff';
+          var align=isAmt?'right':'left';
+          var color=isAmt?getExportMoneyColor(sec,i):'#0f172a';
+          var weight=isAmt?'700':'400';
+          return '<td style="background:'+bg+';border:1px solid #dbeafe;padding:6px;text-align:'+align+';color:'+color+';font-weight:'+weight+';white-space:normal;word-break:break-word">'+escapeHtml(text)+'</td>';
+        }).join("")+'</tr>';
+      }).join(""):'<tr><td colspan="'+sec.heads.length+'" style="border:1px solid #dbeafe;padding:18px;text-align:center;color:#94a3b8">ไม่มีข้อมูล</td></tr>')
+      +'</tbody></table></div>';
+  }).join("");
 }
 
 function doExportPDF(){
@@ -2277,6 +2343,7 @@ function doExportPDF(){
     }).join(""):'<tr><td colspan="'+d.heads.length+'" style="border:1px solid #dbeafe;padding:18px;text-align:center;color:#94a3b8">ไม่มีข้อมูลในช่วงที่เลือก</td></tr>')
     +'</tbody></table>'
     +'<div style="margin-top:14px;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:8px;padding:10px 12px;font-family:Prompt,Sarabun,sans-serif;font-weight:700">'+escapeHtml(d.summary)+'</div>'
+    +exportExtraSectionsPdfHtml(d)
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:36px;margin-top:46px;font-size:13px;color:#0f172a;text-align:center">'
     +'<div><div style="border-top:1px solid #334155;padding-top:8px">ลงชื่อผู้จัดทำรายงาน</div><div style="margin-top:4px">(................................................)</div></div>'
     +'<div><div style="border-top:1px solid #334155;padding-top:8px">ลงชื่อผู้ตรวจสอบ</div><div style="margin-top:4px">(................................................)</div></div>'
