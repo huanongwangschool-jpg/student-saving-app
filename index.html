@@ -392,6 +392,82 @@ body{background:radial-gradient(circle at 8% 94%,rgba(254,243,199,.55),transpare
 #bankCloseStatus{background:#ECFDF5;border-color:#99F6E4;color:#0F766E}
 @media(max-width:900px){.nav-wrap{border-radius:0;border-left:none;border-right:none}.stats-grid,#classUnclosedSummaryGrid{grid-template-columns:repeat(2,minmax(0,1fr))}#page-transactions.page.active,#page-monthclose>.grid-2{grid-template-columns:1fr}}
 @media(max-width:640px){.header-inner{height:74px}.nav-wrap{top:74px}.nav-inner{justify-content:flex-start}.nav-btn{padding:8px 12px}.stats-grid,#classUnclosedSummaryGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.report-type-btn{flex:1 1 auto;font-size:12px}.chart-wrap{height:210px}}
+
+/* Gemini prototype visual layer */
+:root{
+  --school-green:#0F766E;
+  --school-green-2:#16A34A;
+  --school-mint:#ECFDF5;
+  --school-gold:#D97706;
+  --school-gold-soft:#FEF3C7;
+  --surface:#FFFFFF;
+  --page-bg:#F7FCF8;
+  --line:#DDE7E3;
+  --soft-shadow:0 14px 38px rgba(15,23,42,.07);
+}
+body{font-family:'Sarabun',sans-serif;background:radial-gradient(circle at 6% 94%,rgba(254,243,199,.45),transparent 22%),linear-gradient(180deg,#F4FFFA 0%,#F8FAFC 54%,#FFFBF1 100%);font-size:14px}
+.header{position:relative;background:transparent;padding:18px 24px 8px}
+.header-inner{height:auto;min-height:58px;padding:0;max-width:1180px}
+.header-inner>i{width:36px;height:36px;border-radius:12px;background:#FFF7ED;color:var(--school-gold);display:flex;align-items:center;justify-content:center;font-size:18px!important}
+.logo{font-size:18px;font-weight:800;color:#0F172A}.logo span{font-size:11.5px;color:#64748B;font-weight:500}
+.header .btn{border-radius:999px;min-height:34px;padding:7px 13px;font-size:12.5px;background:var(--school-gold-soft)!important;color:#92400E!important;border:1px solid #FDE68A!important}
+.nav-wrap{position:sticky;top:0;max-width:1180px;margin:0 auto 14px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.94);box-shadow:0 8px 24px rgba(15,23,42,.05);overflow-x:auto}
+.nav-inner{max-width:none;justify-content:center;gap:10px;padding:8px 12px}
+.nav-btn{border:0;border-radius:10px;padding:9px 18px;font-size:13px;font-weight:700;color:#475569;background:transparent}
+.nav-btn:hover{background:#F1F5F9;color:var(--school-green)}
+.nav-btn.active{background:#D1FAE5;color:var(--school-green);border:1px solid #99F6E4;box-shadow:none}
+.main{max-width:1180px;padding:0 16px 84px}
+.sec-title{font-size:24px;font-weight:800;margin:8px 0 18px;border-left:4px solid var(--school-green);padding-left:14px;line-height:1.25}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--soft-shadow);padding:18px}
+.card-title{font-size:15px;font-weight:800;color:#0F172A;border-bottom:1px solid #EAF0ED;padding-bottom:10px;margin-bottom:14px}
+.card-title i{background:transparent;color:var(--school-green);width:auto;height:auto}
+.stats-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.stat-card{border-radius:16px;border:1px solid var(--line);box-shadow:0 8px 24px rgba(15,23,42,.05);padding:16px;background:#fff}
+.stat-card:hover{transform:none;box-shadow:0 10px 26px rgba(15,23,42,.08)}
+.stat-icon{width:42px;height:42px;border-radius:12px}
+.stat-label{font-size:12px;font-weight:700;color:#64748B}.stat-value{font-size:25px;font-weight:800;color:#0F766E}.stat-sub{font-size:11.5px;color:#94A3B8}
+#classUnclosedSummaryGrid{grid-template-columns:repeat(5,minmax(0,1fr));gap:9px}
+#classUnclosedSummaryGrid .summary-box{min-height:74px;padding:10px;border-radius:10px;background:#F8FAFC;border:1px solid #E2E8F0}
+#classUnclosedSummaryGrid .summary-box .label{font-size:13px;font-weight:800;color:#0F172A}
+#classUnclosedSummaryGrid .summary-box .value{font-size:16px;font-weight:800;color:#0F766E}
+#classUnclosedSummaryGrid .summary-box .stat-sub{font-size:11px;color:#64748B}
+#classUnclosedSummaryGrid .summary-box:hover{background:#D1FAE5;border-color:#5EEAD4}
+.chart-wrap{height:226px}
+#page-transactions.page.active{grid-template-columns:minmax(0,1.25fr) minmax(320px,.92fr);gap:20px}
+#page-transactions>.info-box{background:#FFFFFF;border-color:var(--line);color:#475569;box-shadow:0 8px 24px rgba(15,23,42,.04)}
+.tab-row{border:0;background:#F1F5F9;border-radius:12px;padding:5px;margin-bottom:16px}
+.tab-inner{flex:1;justify-content:center;border-radius:9px;margin:0;border:0;color:#475569}
+.tab-inner.active{background:#fff;color:var(--school-green);box-shadow:0 6px 16px rgba(15,23,42,.06)}
+.quick-amounts{display:flex;gap:8px;flex-wrap:wrap;margin:-2px 0 16px}
+.quick-amounts button{border:1px solid #DDE7E3;background:#fff;border-radius:9px;padding:7px 18px;min-width:72px;font:700 13px 'Sarabun',sans-serif;color:var(--school-green);cursor:pointer}
+.quick-amounts button:hover{background:#ECFDF5;border-color:#99F6E4}
+input,select,textarea{border-color:#DDE7E3;border-radius:10px;min-height:40px;background:#F8FAFC}
+input:focus,select:focus,textarea:focus{background:#fff;border-color:#14B8A6;box-shadow:0 0 0 3px rgba(20,184,166,.12)}
+.btn{border-radius:10px;font-weight:800}.btn-primary{background:var(--school-gold);box-shadow:none}.btn-green{background:var(--school-green);box-shadow:none}.btn-teal{background:#E0F2FE;color:#0369A1;border-color:#BAE6FD}.btn-red{background:#FEE2E2;color:#DC2626;border-color:#FECACA}
+.report-type-grid{display:flex;gap:8px;padding:6px;background:#F1F5F9;border-radius:14px;border:1px solid #E2E8F0}
+.report-type-btn{border:0;border-radius:10px;box-shadow:none;padding:9px 12px;font-size:13px;background:transparent}
+.report-type-btn.active{background:#fff;color:var(--school-green);box-shadow:0 5px 14px rgba(15,23,42,.05)}
+#exportPreviewCard>div:first-child,#bankPreviewCard>div:first-child{align-items:center;background:#fff}
+#exportPreviewCard>div:first-child>div:last-child,#bankPreviewCard .action-row{margin-left:auto}
+.table-wrap{border-radius:14px;border:1px solid #E2E8F0;box-shadow:none}
+table{font-size:13px;border-collapse:separate;border-spacing:0}
+thead tr{background:#F8FAFC}
+th{background:#F8FAFC!important;color:#334155;font-weight:800;border-bottom:1px solid #E2E8F0;padding:12px 14px}
+td{border-bottom:1px solid #EEF2F7;padding:11px 14px}
+tbody tr:nth-child(even){background:#FBFDFD}tbody tr:hover{background:#ECFDF5}
+.money{color:#0F766E}.money-neg{color:#EF4444}
+#page-monthclose{counter-reset:closeStep}
+#page-monthclose>.grid-2{grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr);gap:20px}
+#page-monthclose>.grid-2>.card,#bankPreviewCard{position:relative}
+#page-monthclose>.grid-2>.card .card-title:before,#bankPreviewCard .card-title:before{counter-increment:closeStep;content:counter(closeStep);width:24px;height:24px;border-radius:999px;background:#D1FAE5;color:#0F766E;display:inline-flex;align-items:center;justify-content:center;font-size:12px;margin-right:3px}
+#page-monthclose .form-group>.info-box{display:none}
+#page-monthclose #bankCloseClassGrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+#page-monthclose .class-badge{min-height:72px;border-radius:12px;padding:10px 8px}
+#page-monthclose .class-badge.active{background:#D1FAE5;color:#0F766E;border-color:#14B8A6}
+#bankCloseStatus{background:#F8FAFC;border-color:#E2E8F0;color:#475569}
+#page-monthclose .summary-strip{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media(max-width:900px){.stats-grid{grid-template-columns:repeat(3,minmax(0,1fr))}#classUnclosedSummaryGrid{grid-template-columns:repeat(3,minmax(0,1fr))}#page-transactions.page.active,#page-monthclose>.grid-2{grid-template-columns:1fr}.nav-inner{justify-content:flex-start}}
+@media(max-width:640px){.header{padding:14px 14px 6px}.header-inner{gap:10px}.header-inner>i{display:none}.logo{font-size:15px}.header .btn{font-size:0;padding:8px 10px}.header .btn i{font-size:13px}.nav-wrap{border-radius:0;border-left:0;border-right:0}.nav-btn{padding:8px 11px;font-size:12.5px}.main{padding:0 12px 72px}.sec-title{font-size:20px}.stats-grid{grid-template-columns:1fr}.card{padding:14px}#classUnclosedSummaryGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.report-type-grid{overflow-x:auto;flex-wrap:nowrap}.report-type-btn{white-space:nowrap;flex:0 0 auto}.quick-amounts button{flex:1;min-width:0}#page-monthclose #bankCloseClassGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head>
 <body>
@@ -560,6 +636,12 @@ body{background:radial-gradient(circle at 8% 94%,rgba(254,243,199,.55),transpare
         <div class="form-group"><label>จำนวนเงิน (บาท)</label><input type="number" id="depAmount" placeholder="0.00" min="1" step="0.01"></div>
         <div class="form-group"><label>หมายเหตุ</label><input type="text" id="depNote" placeholder="หมายเหตุ (ถ้ามี)"></div>
       </div>
+      <div class="quick-amounts" aria-label="จำนวนเงินลัด">
+        <button type="button" onclick="document.getElementById('depAmount').value=20">+20</button>
+        <button type="button" onclick="document.getElementById('depAmount').value=50">+50</button>
+        <button type="button" onclick="document.getElementById('depAmount').value=100">+100</button>
+        <button type="button" onclick="document.getElementById('depAmount').value=500">+500</button>
+      </div>
       <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
         <button class="btn btn-green" onclick="doTransaction('DEPOSIT')"><i class="fa-solid fa-floppy-disk"></i>บันทึกการฝาก</button>
         <span id="depBal" style="font-size:13px;color:var(--text-m)"></span>
@@ -575,6 +657,12 @@ body{background:radial-gradient(circle at 8% 94%,rgba(254,243,199,.55),transpare
       <div class="form-row">
         <div class="form-group"><label>จำนวนเงิน (บาท)</label><input type="number" id="wdrAmount" placeholder="0.00" min="1" step="0.01"></div>
         <div class="form-group"><label>หมายเหตุ</label><input type="text" id="wdrNote" placeholder="เช่น ค่าอุปกรณ์การเรียน"></div>
+      </div>
+      <div class="quick-amounts" aria-label="จำนวนเงินลัด">
+        <button type="button" onclick="document.getElementById('wdrAmount').value=20">+20</button>
+        <button type="button" onclick="document.getElementById('wdrAmount').value=50">+50</button>
+        <button type="button" onclick="document.getElementById('wdrAmount').value=100">+100</button>
+        <button type="button" onclick="document.getElementById('wdrAmount').value=500">+500</button>
       </div>
       <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
         <button class="btn btn-orange" onclick="doTransaction('WITHDRAW')"><i class="fa-solid fa-hand-holding-dollar"></i>บันทึกการถอน</button>
