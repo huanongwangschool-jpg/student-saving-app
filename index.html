@@ -309,6 +309,47 @@ td .money,td .money-neg{display:inline-block;min-width:72px;text-align:right}
 #toast{right:24px;bottom:24px}.toast-item{border-radius:16px;padding:13px 18px}
 @media(max-width:900px){.main{padding:22px 14px 84px}.nav-inner{padding:8px 10px}.stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.summary-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.report-type-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.header-inner{height:66px}.nav-wrap{top:66px}.main{padding:18px 12px 76px}.logo{font-size:14px}.logo span{font-size:10.5px}.stats-grid,.summary-strip{grid-template-columns:1fr}.class-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.card{padding:18px;border-radius:18px}.sec-title{font-size:19px}.stat-value,.summary-box .value{font-size:20px}.btn{width:auto;max-width:100%;justify-content:center}.action-row .btn{flex:1 1 auto}.table-wrap{margin-left:-4px;margin-right:-4px}}
+
+/* Declutter pass */
+:root{
+  --bg:#F8FAFC;--shadow:0 3px 12px rgba(15,23,42,.04);--shadow-lg:0 8px 22px rgba(15,23,42,.08);
+}
+body{background:#F8FAFC;font-weight:400}
+.main{max-width:1160px;padding-top:24px}
+.header-inner,.nav-inner{max-width:1160px}
+.card{padding:18px;margin-bottom:18px;box-shadow:var(--shadow)}
+.card-title{font-size:16px;font-weight:600;margin-bottom:12px}
+.card-title i{width:26px;height:26px;border-radius:8px}
+.sec-title{font-size:23px;font-weight:700;margin-bottom:16px}
+.stat-card{padding:16px;box-shadow:var(--shadow)}
+.stat-value{font-size:24px;font-weight:700}.stat-label{font-weight:600}
+.summary-strip{gap:10px;margin:12px 0 16px}
+.summary-box{padding:12px 14px;border-radius:14px;box-shadow:none}
+.summary-box .label{font-weight:500}.summary-box .value{font-size:20px;font-weight:700}
+#classUnclosedSummaryGrid{grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px}
+#classUnclosedSummaryGrid .summary-box{padding:10px 11px;border-radius:12px;background:#fff;box-shadow:none}
+#classUnclosedSummaryGrid .summary-box .label{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#classUnclosedSummaryGrid .summary-box .value{font-size:16px;font-weight:600}
+.class-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.class-badge{min-height:78px;padding:10px 8px;border-radius:14px;box-shadow:none;background:#fff}
+.class-badge-name{font-size:16px;font-weight:600}.class-badge-total{font-size:12px}
+.class-badge.active{background:#ECFDF5;color:#166534;border-color:#16A34A;box-shadow:none}
+.class-badge.active .class-badge-total{color:#166534}
+.report-type-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.report-type-btn{flex:0 1 auto;min-width:150px;padding:10px 12px;border-radius:14px;box-shadow:none;font-weight:600}
+.report-type-btn i{width:26px;height:26px;border-radius:8px}
+.report-type-btn.active{box-shadow:none;background:#F0FDF4}
+.info-box,.success-box,.danger-box{padding:12px 14px;border-radius:14px;font-weight:400}
+.info-box strong,.success-box strong,.danger-box strong{font-weight:600}
+#page-monthclose #bankCloseStatus{margin-bottom:12px}
+#page-monthclose .summary-strip .summary-box:nth-child(4),
+#page-monthclose .summary-strip .summary-box:nth-child(6),
+#page-monthclose .summary-strip .summary-box:nth-child(7){display:none}
+#page-monthclose .summary-strip{grid-template-columns:repeat(4,minmax(0,1fr))}
+th{font-weight:600;background:transparent}
+td{font-weight:400}.btn{font-weight:600}.btn:hover{transform:none}
+@media(max-width:900px){.class-grid{grid-template-columns:repeat(3,minmax(0,1fr))}#page-monthclose .summary-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.class-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.class-badge{min-height:74px}.report-type-btn{flex:1 1 calc(50% - 8px);min-width:0}.summary-box .value{font-size:18px}.stat-value{font-size:22px}}
 </style>
 </head>
 <body>
@@ -1453,15 +1494,19 @@ function getBankClassFinancialStatus(cls){
 function renderBankCloseFinancialStatus(summaryData){
   var cls=document.getElementById("bankCloseClass").value;
   var ids=["bankUnclosedCash","bankDepositedCash","bankRealTotalCash","bankTotalAmount","bankTotalTx","bankClosedAt","bankClosedBy"];
+  var statusStrip=document.getElementById("bankUnclosedCash")?document.getElementById("bankUnclosedCash").closest(".summary-strip"):null;
   if(!cls){
-    ids.forEach(function(id){
-      var el=document.getElementById(id);
-      if(el)el.textContent="กรุณาเลือกชั้นเรียนก่อน";
-    });
+    if(statusStrip)statusStrip.style.display="none";
+    var status=document.getElementById("bankCloseStatus");
+    if(status){
+      status.className="info-box";
+      status.innerHTML='<i class="fa-solid fa-chalkboard-user"></i><div><strong>เลือกชั้นเรียนก่อน</strong><br><span>ระบบจะแสดงยอดและรายการของชั้นเรียนที่เลือก</span></div>';
+    }
     var saveBtn=document.getElementById("bankSaveBtn");
     if(saveBtn)saveBtn.disabled=true;
     return;
   }
+  if(statusStrip)statusStrip.style.display="";
   var selectedMonth=document.getElementById("bankCloseMonth").value;
   var selectedYear=Number(document.getElementById("bankCloseYear").value)||0;
   if(summaryData&&(String(summaryData.className||cls)!==cls||String(summaryData.month)!==String(selectedMonth)||Number(summaryData.year)!==selectedYear)){
