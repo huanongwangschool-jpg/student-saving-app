@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบออมทรัพย์นักเรียน - UI Prototype</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- Design Tokens & Variables --- */
+        :root {
+            --primary-green: #0F5132;      /* เขียวเข้มพรีเมียม น่าเชื่อถือ */
+            --primary-light-green: #D1E7DD;/* เขียวอ่อนสำหรับตกแต่ง/ป้ายสถานะ */
+            --accent-yellow: #FFC107;      /* เหลืองมัสตาร์ดทองอุ่น ดึงสายตาจุดสำคัญ */
+            --bg-cream-white: #F8F9FA;     /* ขาวออฟไวท์นุ่มนวล ลดการสะท้อนแสง */
+            --text-dark: #212529;          /* สีตัวอักษรเข้มคมชัด */
+            --text-muted: #6C757D;         /* สีตัวอักษรรอง */
+            --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            --border-radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Sarabun', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-cream-white);
+            color: var(--text-dark);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* --- Header & Navigation --- */
+        header {
+            background-color: var(--primary-green);
+            color: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .header-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .logo-section h1 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-section h1::before {
+            content: "🏫";
+            font-size: 1.6rem;
+        }
+
+        .logo-section p {
+            font-size: 0.85rem;
+            color: var(--primary-light-green);
+        }
+
+        nav {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            width: auto;
+            padding-bottom: 5px;
+        }
+
+        .nav-btn {
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.8);
+            padding: 10px 16px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .nav-btn.active {
+            background-color: var(--accent-yellow);
+            color: var(--text-dark);
+            font-weight: 600;
+        }
+
+        /* --- Main Layout Container --- */
+        main {
+            max-width: 1200px;
+            width: 100%;
+            margin: 25px auto;
+            padding: 0 20px;
+            flex: 1;
+        }
+
+        .page-panel {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .page-panel.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- Reusable UI Components --- */
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--primary-green);
+            border-left: 5px solid var(--accent-yellow);
+            padding-left: 12px;
+        }
+
+        .card {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 24px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 24px;
+            border: 1px solid rgba(0,0,0,0.03);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        /* Form Controls */
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            font-size: 1rem;
+            background-color: #fff;
+            color: var(--text-dark);
+            transition: border-color 0.15s ease-in-out;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-green);
+            box-shadow: 0 0 0 3px rgba(15, 81, 50, 0.15);
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-block;
+            font-weight: 500;
+            text-align: center;
+            padding: 12px 24px;
+            font-size: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-green);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #0b3d25;
+        }
+
+        .btn-accent {
+            background-color: var(--accent-yellow);
+            color: var(--text-dark);
+            font-weight: 600;
+        }
+
+        .btn-accent:hover {
+            background-color: #e0a800;
+        }
+
+        /* Tables */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            margin-top: 15px;
+            background: white;
+            border-radius: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #f1f3f5;
+            color: var(--text-dark);
+            padding: 14px 16px;
+            font-weight: 600;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #dee2e6;
+            color: #495057;
+        }
+
+        tr:hover {
+            background-color: rgba(15, 81, 50, 0.02);
+        }
+
+        /* --- Specific Page Styles --- */
+        /* 1. Dashboard Page */
+        .stat-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: white;
+            padding: 24px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+            border-left: 6px solid var(--primary-green);
+        }
+
+        .stat-card.accent {
+            border-left-color: var(--accent-yellow);
+        }
+
+        .stat-info h3 {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .stat-info p {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .badge-success {
+            background-color: var(--primary-light-green);
+            color: var(--primary-green);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        /* 2. Deposit Page Quick Cash Buttons */
+        .quick-cash-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .btn-outline {
+            background: white;
+            border: 1px solid #ced4da;
+            color: var(--text-dark);
+            padding: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .btn-outline:hover {
+            border-color: var(--primary-green);
+            background-color: rgba(15, 81, 50, 0.05);
+            color: var(--primary-green);
+        }
+
+        /* 3. Report Page Filters */
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            align-items: flex-end;
+        }
+
+        .tab-segmented {
+            display: flex;
+            background: #e9ecef;
+            padding: 4px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .tab-seg-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            padding: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 6px;
+            color: var(--text-muted);
+        }
+
+        .tab-seg-btn.active {
+            background: white;
+            color: var(--text-dark);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            font-weight: 600;
+        }
+
+        /* 4. Month-End Lock Steps */
+        .step-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .step-block {
+            border-left: 3px solid #dee2e6;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .step-block.active {
+            border-left-color: var(--primary-green);
+        }
+
+        .step-number {
+            position: absolute;
+            left: -14px;
+            top: 0;
+            width: 26px;
+            height: 26px;
+            background-color: #dee2e6;
+            color: var(--text-muted);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .step-block.active .step-number {
+            background-color: var(--primary-green);
+            color: white;
+        }
+
+        .step-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--text-dark);
+        }
+
+        .step-block.active .step-title {
+            color: var(--primary-green);
+        }
+
+        .step-content {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 15px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            border-radius: 4px;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+
+        .status-ready { background-color: #d1e7dd; color: #0f5132; }
+        .status-pending { background-color: #fff3cd; color: #664d03; }
+
+        /* --- Footer --- */
+        footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: auto;
+            border-top: 1px solid #dee2e6;
+        }
+
+        /* --- Mobile Responsive Breakpoints --- */
+        @media (max-width: 768px) {
+            .header-container {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            nav {
+                width: 100%;
+            }
+            .grid-2, .grid-3 {
+                grid-template-columns: 1fr;
+            }
+            .filter-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-container">
+            <div class="logo-section">
+                <h1>ระบบออมทรัพย์นักเรียน</h1>
+                <p>โรงเรียนสาธิตวิทยาคม (ต้นแบบ UI Prototype)</p>
+            </div>
+            <nav>
+                <button class="nav-btn active" onclick="switchPage('dashboard')">แดชบอร์ด</button>
+                <button class="nav-btn" onclick="switchPage('deposit')">บันทึกฝากเงิน</button>
+                <button class="nav-btn" onclick="switchPage('report')">รายงานแยกชั้น</button>
+                <button class="nav-btn" onclick="switchPage('monthend')">ปิดยอดสิ้นเดือน</button>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+
+        <div id="page-dashboard" class="page-panel active">
+            <h2 class="page-title">ภาพรวมระบบออมทรัพย์</h2>
+            
+            <div class="grid-2" style="margin-bottom: 25px;">
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>ยอดเงินออมรวมทั้งระบบ</h3>
+                        <p>฿142,500.00</p>
+                    </div>
+                    <span class="badge-success">อัปเดตวันนี้</span>
+                </div>
+                <div class="stat-card accent">
+                    <div class="stat-info">
+                        <h3>เงินสดรวมที่ถือโดยโรงเรียน</h3>
+                        <p>฿12,450.00</p>
+                    </div>
+                    <span class="badge-success" style="background-color: #fff3cd; color: #664d03;">รอส่งธนาคาร</span>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: var(--primary-green);">ยอดเงินสะสมแยกตามระดับชั้น</h3>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ระดับชั้น</th>
+                                    <th style="text-align: right;">จำนวนนักเรียน</th>
+                                    <th style="text-align: right;">ยอดเงินสะสมรวม</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>ประถมศึกษาปีที่ 1</td><td style="text-align: right;">24 คน</td><td style="text-align: right; font-weight: 500;">฿18,200.00</td></tr>
+                                <tr><td>ประถมศึกษาปีที่ 2</td><td style="text-align: right;">26 คน</td><td style="text-align: right; font-weight: 500;">฿22,450.00</td></tr>
+                                <tr><td>ประถมศึกษาปีที่ 3</td><td style="text-align: right;">22 คน</td><td style="text-align: right; font-weight: 500;">฿19,100.00</td></tr>
+                                <tr><td>ประถมศึกษาปีที่ 4</td><td style="text-align: right;">25 คน</td><td style="text-align: right; font-weight: 500;">฿25,600.00</td></tr>
+                                <tr><td>ประถมศึกษาปีที่ 5</td><td style="text-align: right;">28 คน</td><td style="text-align: right; font-weight: 500;">฿31,150.00</td></tr>
+                                <tr><td>ประถมศึกษาปีที่ 6</td><td style="text-align: right;">20 คน</td><td style="text-align: right; font-weight: 500;">฿26,000.00</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: var(--primary-green);">กิจกรรมธุรกรรมล่าสุดวันนี้</h3>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>นักเรียน</th>
+                                    <th>ชั้น</th>
+                                    <th style="text-align: right;">จำนวนเงิน</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>ด.ช. ณัฐชนน (สมมุติ)</td><td>ป.6</td><td style="text-align: right; color: var(--primary-green); font-weight: 600;">+ ฿100.00</td></tr>
+                                <tr><td>ด.ญ. พิชชาภา (สมมุติ)</td><td>ป.2</td><td style="text-align: right; color: var(--primary-green); font-weight: 600;">+ ฿50.00</td></tr>
+                                <tr><td>ด.ช. ธนกร (สมมุติ)</td><td>ป.4</td><td style="text-align: right; color: var(--primary-green); font-weight: 600;">+ ฿20.00</td></tr>
+                                <tr><td>ด.ญ. อริศรา (สมมุติ)</td><td>ป.1</td><td style="text-align: right; color: #dc3545; font-weight: 600;">- ฿200.00</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="page-deposit" class="page-panel">
+            <h2 class="page-title">บันทึกธุรกรรมฝากเงิน</h2>
+            <div class="grid-2">
+                <div class="card">
+                    <form onsubmit="event.preventDefault(); alert('นี่คือระบบจำลอง: บันทึกสำเร็จ (Mockup Only)');">
+                        <div class="form-group">
+                            <label>1. เลือกระดับชั้นเรียน</label>
+                            <select class="form-control">
+                                <option>-- เลือกชั้นเรียน --</option>
+                                <option>ประถมศึกษาปีที่ 1</option>
+                                <option>ประถมศึกษาปีที่ 2</option>
+                                <option>ประถมศึกษาปีที่ 6</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>2. เลือกรายชื่อนักเรียน</label>
+                            <select class="form-control">
+                                <option>-- เลือกนักเรียน (จะแสดงเมื่อเลือกชั้น) --</option>
+                                <option>ด.ช. กิตติศักดิ์ (ตัวอย่างม็อกอัพ)</option>
+                                <option>ด.ญ. นภัสสร (ตัวอย่างม็อกอัพ)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>3. จำนวนเงินฝาก (บาท)</label>
+                            <input type="number" class="form-control" placeholder="0.00" min="1" id="depositAmount">
+                            <div class="quick-cash-container">
+                                <button type="button" class="btn-outline" onclick="document.getElementById('depositAmount').value=20">+20</button>
+                                <button type="button" class="btn-outline" onclick="document.getElementById('depositAmount').value=50">+50</button>
+                                <button type="button" class="btn-outline" onclick="document.getElementById('depositAmount').value=100">+100</button>
+                                <button type="button" class="btn-outline" onclick="document.getElementById('depositAmount').value=500">+500</button>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-accent" style="margin-top: 10px;">💾 บันทึกรายการฝากเงิน</button>
+                    </form>
+                </div>
+
+                <div class="card">
+                    <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: var(--text-muted);">รายการฝากที่เพิ่งบันทึกเสร็จ (เซสชันนี้)</h3>
+                    <div style="text-align: center; padding: 40px 0; color: var(--text-muted);">
+                        <p style="font-size: 2rem; margin-bottom: 10px;">📋</p>
+                        <p>พร้อมแสดงรายการเรียงลำดับทันทีเมื่อมีการคีย์ข้อมูล เพื่อให้ครูตรวจสอบย้อนหลังได้ง่าย</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="page-report" class="page-panel">
+            <h2 class="page-title">รายงานการออมเงินสะสม</h2>
+            
+            <div class="card">
+                <div class="tab-segmented">
+                    <button class="tab-seg-btn active" id="btn-period-day" onclick="togglePeriodFilter('day')">คัดกรองตาม วัน / ช่วงวันที่</button>
+                    <button class="tab-seg-btn" id="btn-period-month" onclick="togglePeriodFilter('month')">คัดกรองตาม เดือน / ช่วงเดือน</button>
+                </div>
+
+                <div class="filter-row">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>ระดับชั้น</label>
+                        <select class="form-control">
+                            <option>ประถมศึกษาปีที่ 6</option>
+                            <option>ประถมศึกษาปีที่ 5</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group filter-date-group" style="margin-bottom: 0;">
+                        <label id="date-label-1">เริ่มวันที่</label>
+                        <input type="date" class="form-control" value="2026-05-01">
+                    </div>
+                    <div class="form-group filter-date-group" style="margin-between: 0;">
+                        <label id="date-label-2">สิ้นสุดวันที่</label>
+                        <input type="date" class="form-control" value="2026-05-31">
+                    </div>
+
+                    <div style="margin-bottom: 0;">
+                        <button class="btn btn-primary" onclick="alert('ดึงข้อมูลม็อกอัพรายงานเรียบร้อย')">🔍 ค้นหา</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 15px; gap: 10px;">
+                    <h3 style="font-size: 1.1rem; color: var(--primary-green);">รายชื่อและยอดเงินสะสม: ชั้นประถมศึกษาปีที่ 6</h3>
+                    <button class="btn-outline" style="width: auto; padding: 6px 12px;" onclick="alert('ดาวน์โหลดไฟล์ม็อกอัพ Excel')">🟢 ส่งออกเป็น Excel</button>
+                </div>
+                
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>เลขที่</th>
+                                <th>รหัสนักเรียน</th>
+                                <th>ชื่อ - นามสกุล</th>
+                                <th style="text-align: right;">ยอดรวมฝาก</th>
+                                <th style="text-align: right;">ยอดรวมถอน</th>
+                                <th style="text-align: right;">คงเหลือสุทธิ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>1</td><td>STUD-001</td><td>เด็กชาย นามสมมุติ ก.</td><td style="text-align: right;">฿1,200.00</td><td style="text-align: right;">฿0.00</td><td style="text-align: right; font-weight: 600;">฿1,200.00</td></tr>
+                            <tr><td>2</td><td>STUD-002</td><td>เด็กหญิง นามสมมุติ ข.</td><td style="text-align: right;">฿2,450.00</td><td style="text-align: right;">฿100.00</td><td style="text-align: right; font-weight: 600;">฿2,350.00</td></tr>
+                            <tr><td>3</td><td>STUD-003</td><td>เด็กชาย นามสมมุติ ค.</td><td style="text-align: right;">฿800.00</td><td style="text-align: right;">฿0.00</td><td style="text-align: right; font-weight: 600;">฿800.00</td></tr>
+                            <tr><td>4</td><td>STUD-004</td><td>เด็กหญิง นามสมมุติ ง.</td><td style="text-align: right;">฿1,500.00</td><td style="text-align: right;">฿50.00</td><td style="text-align: right; font-weight: 600;">฿1,450.00</td></tr>
+                            <tr style="background-color: #f8f9fa; font-weight: bold; border-top: 2px solid #dee2e6;">
+                                <td colspan="3" style="text-align: center; color: var(--primary-green);">รวมผลลัพธ์หน้าจอจำลอง (4 รายชื่อม็อกอัพ)</td>
+                                <td style="text-align: right; color: var(--primary-green);">฿5,950.00</td>
+                                <td style="text-align: right; color: #dc3545;">฿150.00</td>
+                                <td style="text-align: right; background-color: var(--primary-light-green); color: var(--primary-green);">฿5,800.00</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="page-monthend" class="page-panel">
+            <h2 class="page-title">ระบบปิดบัญชีออมทรัพย์ประจำเดือน</h2>
+            
+            <div class="card">
+                <div class="step-container">
+                    
+                    <div class="step-block active">
+                        <div class="step-number">1</div>
+                        <div class="step-title">ตรวจสอบสถานะรายชั้นเรียนประจำงวดเดือนปัจจุบัน</div>
+                        <div class="step-content">
+                            <p style="margin-bottom: 10px;">กรุณาตรวจเช็กว่าคุณครูประจำชั้นทุกห้องทำการคีย์ข้อมูลครบถ้วนแล้วหรือยัง:</p>
+                            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                <span class="status-badge status-ready">ป.1 ✔️ ตรวจแล้ว</span>
+                                <span class="status-badge status-ready">ป.2 ✔️ ตรวจแล้ว</span>
+                                <span class="status-badge status-ready">ป.3 ✔️ ตรวจแล้ว</span>
+                                <span class="status-badge status-ready">ป.4 ✔️ ตรวจแล้ว</span>
+                                <span class="status-badge status-pending">ป.5 ⚠️ รอคุณครูยืนยัน</span>
+                                <span class="status-badge status-ready">ป.6 ✔️ ตรวจแล้ว</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-block active">
+                        <div class="step-number">2</div>
+                        <div class="step-title">สรุปยอดรวมตู้เซฟโรงเรียนที่จะทำการล็อกปิดบัญชี</div>
+                        <div class="step-content">
+                            <table style="max-width: 400px; margin-top: 10px;">
+                                <tr><td>จำนวนเงินออมประจำเดือนนี้:</td><td style="text-align: right; font-weight: 600;">฿12,450.00</td></tr>
+                                <tr><td>สถานะกระบวนการ:</td><td style="text-align: right; color: #664d03; font-weight: 600;">รอล็อกปิดงวด</td></tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="step-block active">
+                        <div class="step-number">3</div>
+                        <div class="step-title">ยืนยันการล็อกระบบและจัดทำเอกสารนำส่งธนาคาร</div>
+                        <div class="step-content">
+                            <p style="color: #dc3545; font-size: 0.85rem; margin-bottom: 10px;">⚠️ การปิดยอดจะส่งผลให้ครูท่านอื่นไม่สามารถบันทึกหรือแก้ไขข้อมูลย้อนหลังของเดือนนี้ได้</p>
+                            <button class="btn btn-primary" style="max-width: 320px;" onclick="alert('ทำการจำลองล็อกยอดบัญชีสำเร็จ เอกสาร PDF นำส่งธนาคารพร้อมดาวน์โหลด')">🔒 อนุมัติปิดยอดประจำเดือน</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <footer>
+        <p>© 2026 ระบบการเงินภายในโรงเรียนต้นแบบ - ออกแบบโดยมุ่งเน้นความสบายตาและตอบโจทย์งานคุณครู</p>
+    </footer>
+
+    <script>
+        // ฟังก์ชันสลับหน้าเมนูหลักแบบ Single Page Tab เปลี่ยนสเตททันที
+        function switchPage(pageId) {
+            // ค้นหาทุกหน้ากระดานแล้วซ่อนไว้
+            const pages = document.querySelectorAll('.page-panel');
+            pages.forEach(page => page.classList.remove('active'));
+
+            // ลบสถานะความแอคทีฟของปุ่มเดิมออกทั้งหมด
+            const navButtons = document.querySelectorAll('.nav-btn');
+            navButtons.forEach(btn => btn.classList.remove('active'));
+
+            // เปิดแสดงผลเฉพาะหน้าที่เลือก
+            document.getElementById('page-' + pageId).classList.add('active');
+
+            // ไฮไลท์สีเหลืองมัสตาร์ดที่ปุ่มเมนูที่กดอยู่
+            const event = window.event;
+            if(event && event.target) {
+                event.target.classList.add('active');
+            } else {
+                // กรณีเรียกโดยจุดอื่น ให้หาตามเนื้อหาข้อความปุ่ม
+                navButtons.forEach(btn => {
+                    if(btn.getAttribute('onclick').includes(pageId)) {
+                        btn.classList.add('active');
+                    }
+                });
+            }
+        }
+
+        // ฟังก์ชันสลับฟิลเตอร์ของหน้ารายงาน (วัน vs เดือน) ตามความต้องการเพิ่มเติม
+        function togglePeriodFilter(type) {
+            const btnDay = document.getElementById('btn-period-day');
+            const btnMonth = document.getElementById('btn-period-month');
+            const label1 = document.getElementById('date-label-1');
+            const label2 = document.getElementById('date-label-2');
+
+            if(type === 'day') {
+                btnDay.classList.add('active');
+                btnMonth.classList.remove('active');
+                label1.innerText = 'เริ่มวันที่';
+                label2.innerText = 'สิ้นสุดวันที่';
+            } else {
+                btnDay.classList.remove('active');
+                btnMonth.classList.add('active');
+                label1.innerText = 'เริ่มงวดเดือน';
+                label2.innerText = 'สิ้นสุดงวดเดือน';
+            }
+        }
+    </script>
+</body>
+</html>
