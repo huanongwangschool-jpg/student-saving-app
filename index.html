@@ -81,7 +81,7 @@ body{font-family:'Noto Sans Thai','Sarabun',sans-serif;background:var(--bg);colo
 .promo-list{max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius)}.promo-row{display:flex;align-items:center;gap:9px;padding:9px 13px;border-bottom:1px solid var(--border);font-size:14px}.promo-row:last-child{border-bottom:0}.promo-row:hover{background:#F9FAFB}.promo-row input[type=checkbox]{width:16px;height:16px;accent-color:var(--primary)}.promo-row .promo-name{flex:1}tr.row-transferred td{background:#FFF7ED!important}tr.row-graduated td{background:#F0FDF4!important}.audit-note{color:var(--red);font-size:12px;font-weight:600;display:flex;gap:4px}.audit-ADD_STUDENT,.audit-ADD_TX{background:var(--green-l);color:var(--primary)}.audit-EDIT_STUDENT{background:var(--sky-l);color:var(--sky-d)}.audit-TRANSFER_OUT{background:var(--orange-l);color:#C2410C}.audit-DELETE_STUDENT,.audit-DELETE_TX{background:var(--red-l);color:var(--red)}.audit-PROMOTE{background:var(--purple-l);color:var(--purple)}
 #page-dashboard>.grid-2:first-of-type{grid-template-columns:1fr}#page-dashboard>.grid-2:first-of-type>.card:first-child{display:none}#page-dashboard>.grid-2:first-of-type>.card{margin-bottom:0}#page-dashboard .card{margin-bottom:22px}.dashboard-class-card{min-height:64px!important;max-height:72px}.dashboard-class-card .class-row{display:flex;align-items:center;justify-content:space-between;gap:8px}.dashboard-class-card .class-row strong{font-size:16px}.dashboard-class-card .class-row span{font-size:13px;color:var(--text-m)}.dashboard-class-card .class-row .money{font-size:16px;color:var(--primary)}.dashboard-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}.dashboard-section-head .card-title{margin-bottom:0}.chart-empty{display:flex;align-items:center;justify-content:center;min-height:180px;color:var(--text-m);font-size:14px;background:#F9FAFB;border-radius:12px}
 #exportPreviewCard .summary-strip{grid-template-columns:repeat(3,minmax(0,1fr))}#exportExtraSections{display:none!important}.report-center-card #exportGuideBox{margin-bottom:0}.report-center-card+.card #exportSummaryRow{background:#F8F9FA!important;color:var(--primary)!important;font-family:'Noto Sans Thai','Sarabun',sans-serif!important}
-#page-monthclose[data-step="1"] .bank-step-class,#page-monthclose[data-step="3"] .bank-step-status,#page-monthclose[data-step="4"] .bank-step-operator{display:block}.bank-step-class,.bank-step-period,.bank-step-status,.bank-step-operator,#page-monthclose:not([data-step="5"]) #bankPreviewCard{display:none!important}#page-monthclose[data-step="2"] .bank-step-period{display:grid!important}#page-monthclose[data-step="5"] #bankPreviewCard{display:block!important}.bank-wizard-layout{grid-template-columns:1fr!important}.bank-wizard-actions{display:flex;align-items:center;justify-content:space-between;gap:10px}.bank-wizard-actions .action-row{margin-left:auto}.wizard-step{opacity:.58}.wizard-step.active{opacity:1;border-color:var(--primary);background:#F3FAF6}.wizard-step.done span{background:var(--accent);color:#111827}.bank-step-card .original-bank-actions{display:none!important}
+#page-monthclose[data-step="1"] .bank-step-class,#page-monthclose[data-step="3"] .bank-step-status,#page-monthclose[data-step="4"] .bank-step-operator{display:block!important}.bank-step-class,.bank-step-period,.bank-step-status,.bank-step-operator,#page-monthclose:not([data-step="5"]) #bankPreviewCard{display:none!important}#page-monthclose[data-step="2"] .bank-step-period{display:grid!important}#page-monthclose[data-step="5"] #bankPreviewCard{display:block!important}.bank-wizard-layout{grid-template-columns:1fr!important}.bank-wizard-actions{display:flex;align-items:center;justify-content:space-between;gap:10px}.bank-wizard-actions .action-row{margin-left:auto}.wizard-step{opacity:.58}.wizard-step.active{opacity:1;border-color:var(--primary);background:#F3FAF6}.wizard-step.done span{background:var(--accent);color:#111827}.bank-step-card .original-bank-actions{display:none!important}
 @media(max-width:900px){.nav-wrap{top:78px}.stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#classUnclosedSummaryGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.class-grid{grid-template-columns:repeat(3,minmax(0,1fr))}#page-transactions.page.active,#page-monthclose>.grid-2,.report-center-card .form-row{grid-template-columns:1fr}.report-center-card #exportReportTypeGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.wizard-steps{grid-template-columns:repeat(2,minmax(0,1fr))}#page-monthclose .summary-strip,#exportReportSummaryCards{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.header{padding:13px 14px}.header-inner{align-items:flex-start}.header-inner>i{display:none}.logo{font-size:16px}.header .btn{font-size:0;padding:8px 10px}.header .btn i{font-size:13px}.nav-wrap{top:76px}.nav-inner{padding:8px 14px}.nav-btn{padding:9px 12px;font-size:13px}.main{padding:18px 12px 64px}.sec-title{font-size:24px}.stats-grid{grid-template-columns:1fr}.card{padding:16px;margin-bottom:18px}.summary-strip{grid-template-columns:1fr}.quick-amounts{grid-template-columns:repeat(4,1fr)}#classUnclosedSummaryGrid,.class-grid,#page-monthclose #bankCloseClassGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.wizard-steps,#exportReportSummaryCards,.report-center-card #exportReportTypeGrid{grid-template-columns:1fr}.chart-wrap{height:240px}#exportPreviewCard>div:first-child>div:last-child{margin-left:0;width:100%}#exportPreviewCard>div:first-child>div:last-child .btn{flex:1}}
 </style>
@@ -100,6 +100,7 @@ body{font-family:'Noto Sans Thai','Sarabun',sans-serif;background:var(--bg);colo
       <span>โรงเรียนบ้านหัวหนองแวง(สามัคคีราษฎร์บำรุง)</span>
     </div>
     <button class="btn btn-ghost btn-sm" id="adminLoginOpenBtn" onclick="openModal('adminLoginModal')" style="background:rgba(255,255,255,.16);color:#fff;border-color:rgba(255,255,255,.35)"><i class="fa-solid fa-user-shield"></i>เข้าสู่ระบบผู้ดูแลระบบ</button>
+    <button class="btn btn-ghost btn-sm admin-only" id="adminStudentsBtn" onclick="switchPage('students')" style="display:none;background:rgba(255,255,255,.16);color:#fff;border-color:rgba(255,255,255,.35)"><i class="fa-solid fa-user-plus"></i>จัดการนักเรียน</button>
     <button class="btn btn-ghost btn-sm" id="adminLogoutBtn" onclick="adminLogout()" style="display:none;background:rgba(255,255,255,.16);color:#fff;border-color:rgba(255,255,255,.35)"><i class="fa-solid fa-right-from-bracket"></i>ออกจากระบบ Admin</button>
   </div>
 </header>
@@ -162,9 +163,11 @@ body{font-family:'Noto Sans Thai','Sarabun',sans-serif;background:var(--bg);colo
   <div class="card admin-only" style="display:none">
     <div class="card-title"><i class="fa-solid fa-user-plus"></i>เพิ่มนักเรียนใหม่</div>
     <div class="form-row">
-      <div class="form-group"><label>ชื่อ-นามสกุล</label><input type="text" id="newStudentName" placeholder="เช่น เด็กหญิงสมใจ ใจดี"></div>
-      <div class="form-group"><label>ชั้นเรียน</label><select id="newStudentClass"></select></div>
       <div class="form-group"><label>เลขที่</label><input type="number" id="newStudentNumber" placeholder="1" min="1"></div>
+      <div class="form-group"><label>ชื่อ</label><input type="text" id="newStudentFirstName" placeholder="เช่น เด็กหญิงสมใจ"></div>
+      <div class="form-group"><label>นามสกุล</label><input type="text" id="newStudentLastName" placeholder="เช่น ใจดี"></div>
+      <div class="form-group"><label>ชั้นเรียน</label><select id="newStudentClass"></select></div>
+      <input type="hidden" id="newStudentName">
     </div>
     <button class="btn btn-green" onclick="doAddStudent()"><i class="fa-solid fa-plus"></i>เพิ่มนักเรียน</button>
   </div>
@@ -1323,7 +1326,6 @@ function selectBankCloseClass(cls,card){
   document.querySelectorAll("#bankCloseClassGrid .class-badge").forEach(function(b){b.classList.remove("active");});
   if(card)card.classList.add("active");
   renderBankCloseFinancialStatus();
-  setBankWizardStep(2);
 }
 
 function getBankClassFinancialStatus(cls){
@@ -1400,14 +1402,20 @@ function renderStudentsTable(){
 }
 
 function doAddStudent(){
-  var name=document.getElementById("newStudentName").value.trim();
+  var firstEl=document.getElementById("newStudentFirstName");
+  var lastEl=document.getElementById("newStudentLastName");
+  var legacyNameEl=document.getElementById("newStudentName");
+  var firstName=firstEl?firstEl.value.trim():"";
+  var lastName=lastEl?lastEl.value.trim():"";
+  var name=(firstName+" "+lastName).trim() || (legacyNameEl?legacyNameEl.value.trim():"");
+  if(legacyNameEl)legacyNameEl.value=name;
   var cls=document.getElementById("newStudentClass").value;
   var num=document.getElementById("newStudentNumber").value;
   if(!name){showToast("กรุณากรอกชื่อ-นามสกุล","error");return;}
   if(!num){showToast("กรุณากรอกเลขที่","error");return;}
   showLoading(true,"กำลังบันทึก...");
   gasCall("addStudent",JSON.stringify({name:name,className:cls,number:Number(num)}))
-    .then(function(r){showLoading(false);if(r.success){appStudents.push({id:r.id,name:name,className:cls,number:Number(num),status:"active",statusNote:"",createdAt:""});showToast("เพิ่มนักเรียนสำเร็จ!","success");document.getElementById("newStudentName").value="";document.getElementById("newStudentNumber").value="";refreshAll();}else showToast(r.error,"error");})
+    .then(function(r){showLoading(false);if(r.success){appStudents.push({id:r.id,name:name,className:cls,number:Number(num),status:"active",statusNote:"",createdAt:""});showToast("เพิ่มนักเรียนสำเร็จ!","success");if(firstEl)firstEl.value="";if(lastEl)lastEl.value="";if(legacyNameEl)legacyNameEl.value="";document.getElementById("newStudentNumber").value="";refreshAll();}else showToast(r.error,"error");})
     .catch(function(e){showLoading(false);showToast(String(e.message||e),"error");});
 }
 
