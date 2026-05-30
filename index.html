@@ -568,6 +568,7 @@ tr.row-graduated td{background:#f0fdf4!important;color:var(--text-m)}
         </button>
       </div>
     </div>
+    <div class="summary-strip" id="exportReportSummaryCards" style="display:none"></div>
     <div class="table-wrap">
       <table><thead id="exportPreviewHead"></thead><tbody id="exportPreviewBody"></tbody></table>
     </div>
@@ -1812,6 +1813,15 @@ function buildMonthlyClassComparison(period){
     return [c,classStudents.length,dep,wdr,dep-wdr];
   });
 }
+function getBalanceUntil(studentId,dateValue){
+  var target=parseAppDate(dateValue);
+  if(!target)return getBalance(studentId);
+  target.setHours(23,59,59,999);
+  return appTx.filter(function(t){
+    var d=parseAppDate(t.date);
+    return t.studentId===studentId&&d&&d<=target;
+  }).reduce(function(a,t){return a+(t.type==="DEPOSIT"?(Number(t.amount)||0):-(Number(t.amount)||0));},0);
+}
 
 function buildExportData(){
   var cls   = document.getElementById("exportClass").value;
@@ -1885,6 +1895,38 @@ function buildExportData(){
     var txMonth = txFiltered.filter(function(t){
       return exactDate?isSameDay(t,exactDate):txInExportPeriod(t,period);
     });
+    if(cls){
+      var reportDate=exactDate||new Date().toISOString().split("T")[0];
+      var classStudentsDaily=students.filter(function(s){return s.className===cls;}).sort(sortStudents);
+      var dayRows=classStudentsDaily.map(function(s){
+        var items=txFiltered.filter(function(t){return t.studentId===s.id&&isSameDay(t,reportDate);});
+        var dep=items.filter(function(t){return t.type==="DEPOSIT";}).reduce(function(a,t){return a+(Number(t.amount)||0);},0);
+        var wdr=items.filter(function(t){return t.type==="WITHDRAW";}).reduce(function(a,t){return a+(Number(t.amount)||0);},0);
+        var note=items.length?noteText(items):"ไม่มีรายการ";
+        return [s.number||"",s.name,dep,wdr,dep-wdr,getBalanceUntil(s.id,reportDate),note];
+      });
+      var totalDailyDep=dayRows.reduce(function(a,r){return a+r[2];},0);
+      var totalDailyWdr=dayRows.reduce(function(a,r){return a+r[3];},0);
+      var dailyTxCount=txFiltered.filter(function(t){return isSameDay(t,reportDate);}).length;
+      return {
+        title:"รายงานการออมรายวัน ชั้น "+cls+" วันที่ "+fmtDate(reportDate),
+        subtitle:schoolName+" | ชั้น "+cls+" | วันที่ "+fmtDate(reportDate),
+        heads:["เลขที่","ชื่อ-นามสกุล","ยอดฝากวันนี้ (บาท)","ยอดถอนวันนี้ (บาท)","ยอดสุทธิวันนี้ (บาท)","ยอดคงเหลือสะสม (บาท)","หมายเหตุ/สถานะ"],
+        rows:dayRows,
+        summary:"ชั้น "+cls+" | นักเรียน "+classStudentsDaily.length+" คน | รายการฝาก "+dayRows.filter(function(r){return r[2]>0;}).length+" คน | ฝากรวม ฿"+fmt(totalDailyDep)+" | ถอนรวม ฿"+fmt(totalDailyWdr)+" | สุทธิ ฿"+fmt(totalDailyDep-totalDailyWdr),
+        summaryCards:[
+          ["จำนวนนักเรียน",classStudentsDaily.length+" คน"],
+          ["จำนวนรายการฝาก",dailyTxCount+" รายการ"],
+          ["ยอดฝากรวม","฿"+fmt(totalDailyDep)],
+          ["ยอดถอนรวม","฿"+fmt(totalDailyWdr)],
+          ["ยอดสุทธิรวม","฿"+fmt(totalDailyDep-totalDailyWdr)]
+        ],
+        moneyColumns:[2,3,4,5],
+        withdrawColumns:[3],
+        balanceColumns:[4,5],
+        filename:"รายงานการออมรายวัน_"+cls+"_"+reportDate
+      };
+    }
     // group by date
     var dayMap={};
     txMonth.forEach(function(t){
@@ -1919,6 +1961,41 @@ function buildExportData(){
   if(type==="monthly"){
     // รายเดือนตามปี/เดือนที่เลือก
     var txYear = txPeriod;
+    if(cls){
+      var classStudentsMonthly=students.filter(function(s){return s.className===cls;}).sort(sortStudents);
+      var monthlyRows=classStudentsMonthly.map(function(s){
+        var items=txPeriod.filter(function(t){return t.studentId===s.id;});
+        var dep=items.filter(function(t){return t.type==="DEPOSIT";}).reduce(function(a,t){return a+(Number(t.amount)||0);},0);
+        var wdr=items.filter(function(t){return t.type==="WITHDRAW";}).reduce(function(a,t){return a+(Number(t.amount)||0);},0);
+        // MonthlyBankDeposits is class-level only, so per-student bank amount cannot be allocated safely yet.
+        var bankAmount=0;
+        var balance=dep-wdr;
+        return [s.number||"",s.name,dep,wdr,balance,bankAmount,balance+bankAmount];
+      });
+      var totalMonthlyDep=monthlyRows.reduce(function(a,r){return a+r[2];},0);
+      var totalMonthlyWdr=monthlyRows.reduce(function(a,r){return a+r[3];},0);
+      var monthlyFs=getBankClassFinancialStatus(cls);
+      return {
+        title:"รายงานการออมรายเดือน ชั้น "+cls+" "+period.label.replace(/^รายงาน/,""),
+        subtitle:schoolName+" | ชั้น "+cls+" | "+period.label,
+        heads:["เลขที่","ชื่อ-นามสกุล","ยอดฝากเดือนนี้ (บาท)","ยอดถอนเดือนนี้ (บาท)","ยอดสุทธิเดือนนี้ (บาท)","เงินฝากในธนาคาร (บาท)","ยอดรวมทั้งหมด (บาท)"],
+        rows:monthlyRows,
+        summary:"ชั้น "+cls+" | นักเรียน "+classStudentsMonthly.length+" คน | ฝากรวม ฿"+fmt(totalMonthlyDep)+" | ถอนรวม ฿"+fmt(totalMonthlyWdr)+" | สุทธิ ฿"+fmt(totalMonthlyDep-totalMonthlyWdr)+" | เงินฝากธนาคารรวม ฿"+fmt(monthlyFs.bankAmount)+" | ยอดเงินรวมทั้งหมด ฿"+fmt(monthlyFs.totalAmount),
+        summaryCards:[
+          ["จำนวนนักเรียน",classStudentsMonthly.length+" คน"],
+          ["จำนวนรายการฝาก",txPeriod.filter(function(t){return t.type==="DEPOSIT";}).length+" รายการ"],
+          ["ยอดฝากรวม","฿"+fmt(totalMonthlyDep)],
+          ["ยอดถอนรวม","฿"+fmt(totalMonthlyWdr)],
+          ["ยอดสุทธิรวม","฿"+fmt(totalMonthlyDep-totalMonthlyWdr)],
+          ["เงินฝากในธนาคารรวม","฿"+fmt(monthlyFs.bankAmount)],
+          ["ยอดเงินรวมทั้งหมด","฿"+fmt(monthlyFs.totalAmount)]
+        ],
+        moneyColumns:[2,3,4,5,6],
+        withdrawColumns:[3],
+        balanceColumns:[4,5,6],
+        filename:"รายงานการออมรายเดือน_"+cls+"_"+period.fileKey
+      };
+    }
     var monMap={};
     txYear.forEach(function(t){
       var k=monthKey(t.date);
@@ -2148,6 +2225,15 @@ function renderExportExtraSections(data){
       +'<div class="table-wrap"><table><thead><tr>'+sec.heads.map(function(h){return '<th>'+escapeHtml(h)+'</th>';}).join("")+'</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
   }).join("");
 }
+function renderExportSummaryCards(data){
+  var el=document.getElementById("exportReportSummaryCards");
+  if(!el)return;
+  if(!data.summaryCards||!data.summaryCards.length){el.style.display="none";el.innerHTML="";return;}
+  el.style.display="";
+  el.innerHTML=data.summaryCards.map(function(c){
+    return '<div class="summary-box"><div class="label">'+escapeHtml(c[0])+'</div><div class="value">'+escapeHtml(c[1])+'</div></div>';
+  }).join("");
+}
 
 function previewExport(silent){
   if(!isExportReady()){
@@ -2180,6 +2266,7 @@ function previewExport(silent){
       return '<td>'+(isAmt?'<span class="'+getExportMoneyClass(data,i)+'">฿'+fmt(v)+'</span>':v)+'</td>';
     }).join("")+'</tr>';
   });
+  renderExportSummaryCards(data);
   document.getElementById("exportPreviewBody").innerHTML=bodyHtml;
   document.getElementById("exportSummaryRow").textContent=data.summary;
   document.getElementById("exportExtraSections").innerHTML=renderExportExtraSections(data);
@@ -2197,6 +2284,7 @@ function doExportExcel(){
   wsData.push(["เงินคงเหลือที่ยังไม่ได้ปิดยอด",Number(fs.unclosedAmount)||0]);
   wsData.push(["เงินฝากในธนาคาร",Number(fs.bankAmount)||0]);
   wsData.push(["ยอดเงินทั้งหมด",Number(fs.totalAmount)||0]);
+  (d.summaryCards||[]).forEach(function(c){wsData.push([c[0],c[1]]);});
   wsData.push([]);
   wsData.push(d.heads);
   d.rows.forEach(function(r){wsData.push(r.map(function(v){return v;}));});
@@ -2235,9 +2323,10 @@ function doExportCSV(){
     ["เงินคงเหลือที่ยังไม่ได้ปิดยอด",Number(fs.unclosedAmount)||0],
     ["เงินฝากในธนาคาร",Number(fs.bankAmount)||0],
     ["ยอดเงินทั้งหมด",Number(fs.totalAmount)||0],
-    [],
-    d.heads
   ];
+  (d.summaryCards||[]).forEach(function(c){csvData.push([c[0],c[1]]);});
+  csvData.push([]);
+  csvData.push(d.heads);
   d.rows.forEach(function(r){csvData.push(r);});
   csvData.push([]);
   csvData.push([d.summary]);
@@ -2278,6 +2367,17 @@ function financialSummaryPdfHtml(summaryOverride){
       return '<div style="border:1px solid #bae6fd;border-radius:8px;background:#f0f9ff;padding:10px 12px">'
         +'<div style="font-size:12px;color:#475569;margin-bottom:4px">'+escapeHtml(it[0])+'</div>'
         +'<div style="font-family:Prompt,Sarabun,sans-serif;font-size:18px;font-weight:800;color:#0f766e">฿'+fmt(it[1])+'</div>'
+        +'</div>';
+    }).join("")
+    +'</div>';
+}
+function exportSummaryCardsPdfHtml(data){
+  if(!data.summaryCards||!data.summaryCards.length)return "";
+  return '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0 16px">'
+    +data.summaryCards.map(function(c){
+      return '<div style="border:1px solid #bae6fd;border-radius:8px;background:#f8fafc;padding:10px 12px">'
+        +'<div style="font-size:12px;color:#475569;margin-bottom:4px">'+escapeHtml(c[0])+'</div>'
+        +'<div style="font-family:Prompt,Sarabun,sans-serif;font-size:17px;font-weight:800;color:#0f766e">'+escapeHtml(c[1])+'</div>'
         +'</div>';
     }).join("")
     +'</div>';
@@ -2323,7 +2423,7 @@ function doExportPDF(){
     +'<div><strong>ช่วงข้อมูล:</strong> '+escapeHtml(d.subtitle||"-")+'</div>'
     +'<div><strong>วันที่พิมพ์รายงาน:</strong> '+escapeHtml(printDate)+'</div>'
     +'</div>'
-    +financialSummaryPdfHtml(d.financialSummary)
+    +(d.summaryCards&&d.summaryCards.length?exportSummaryCardsPdfHtml(d):financialSummaryPdfHtml(d.financialSummary))
     +'<table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:auto"><thead><tr>'
     +d.heads.map(function(h){return '<th style="background:#0ea5e9;color:#fff;border:1px solid #bae6fd;padding:7px;text-align:left;white-space:normal">'+escapeHtml(h)+'</th>';}).join("")
     +'</tr></thead><tbody>'
