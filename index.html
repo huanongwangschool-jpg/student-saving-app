@@ -270,10 +270,12 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg-cream-white);color:var
 .info-box,.success-box,.danger-box{border-radius:var(--border-radius);padding:13px 15px;border-width:1px;font-weight:400}.info-box{background:#F8F9FA;color:#495057;border-color:#DEE2E6}.success-box{background:var(--primary-light-green);color:var(--primary-green);border-color:#BADBCC}.danger-box{background:#F8D7DA;color:#842029;border-color:#F5C2C7}
 .report-type-grid{display:flex;gap:8px;padding:4px;background:#E9ECEF;border-radius:8px;border:0;margin-bottom:16px}.report-type-btn{flex:1;background:transparent;border:0;border-radius:6px;box-shadow:none;padding:9px 12px;font-size:14px;font-weight:500;color:var(--text-muted);justify-content:center}.report-type-btn i{background:transparent;color:inherit;width:auto;height:auto}.report-type-btn.active{background:#fff;color:var(--text-dark);font-weight:700;box-shadow:0 2px 4px rgba(0,0,0,.05)}#exportReportTypeGrid [data-report-type="class"]{display:none}
 .class-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.class-badge{background:#fff;border:1px solid #DEE2E6;border-radius:var(--border-radius);padding:12px 10px;box-shadow:none;min-height:76px}.class-badge:hover{background:rgba(15,81,50,.04);color:var(--primary-green);border-color:var(--primary-green);transform:none}.class-badge.active{background:var(--primary-light-green);color:var(--primary-green);border-color:var(--primary-green);box-shadow:none;transform:none}.class-badge-name{font-weight:600;font-size:16px}.class-badge-total{font-size:12px;color:var(--text-muted)}
-.chart-wrap{height:250px}#page-dashboard>.grid-2:last-child{display:none}#page-export .summary-strip:first-of-type{display:none}#page-transactions{display:none}.page.active#page-transactions{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(320px,.9fr);gap:20px;align-items:start}#page-transactions>.sec-title,#page-transactions>.info-box{grid-column:1/-1}#page-transactions>.card{margin-bottom:0}#page-transactions>.card:nth-of-type(2) .filter-bar{display:none}#page-transactions>.card:nth-of-type(2) .table-wrap{max-height:440px;overflow:auto}
+.chart-wrap{height:250px}#page-dashboard>.grid-2:last-child{display:none}#page-export>.summary-strip{display:none}#page-transactions{display:none}.page.active#page-transactions{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(320px,.9fr);gap:20px;align-items:start}#page-transactions>.sec-title,#page-transactions>.info-box{grid-column:1/-1}#page-transactions>.card{margin-bottom:0}#page-transactions>.card:nth-of-type(2) .filter-bar{display:none}#page-transactions>.card:nth-of-type(2) .table-wrap{max-height:440px;overflow:auto}
+.report-center-card #exportReportTypeGrid,.report-center-card #exportExactDateGroup,.report-center-card #exportStudentGroup,.report-center-card #exportClassCardGroup,.report-center-card #exportPreviewBtn{display:none!important}.report-center-card #exportClassGroup,.report-center-card #exportYearGroup,.report-center-card #exportMonthFilterGroup{display:block!important}.report-center-card .form-row{grid-template-columns:1.2fr .8fr .8fr}.report-center-card+.card .card-title{color:var(--primary-green)}#exportReportSummaryCards{grid-template-columns:repeat(4,minmax(0,1fr))}
+.wizard-steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:20px}.wizard-step{background:#fff;border:1px solid #DEE2E6;border-left:4px solid var(--primary-green);border-radius:var(--border-radius);box-shadow:var(--card-shadow);padding:12px 14px;font-weight:600;color:var(--text-dark);display:flex;align-items:center;gap:9px}.wizard-step span{width:26px;height:26px;border-radius:50%;background:var(--primary-green);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;flex:0 0 auto}
 #page-monthclose>.grid-2{grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:20px}#page-monthclose .summary-strip .summary-box:nth-child(4),#page-monthclose .summary-strip .summary-box:nth-child(6),#page-monthclose .summary-strip .summary-box:nth-child(7){display:none}#page-monthclose .summary-strip{grid-template-columns:repeat(4,minmax(0,1fr))}#page-monthclose #bankCloseClassGrid{grid-template-columns:repeat(3,minmax(0,1fr))}#bankCloseStatus{background:#F8F9FA;border-color:#DEE2E6;color:#495057}
-@media(max-width:900px){.nav-wrap{top:78px}.stats-grid{grid-template-columns:repeat(3,minmax(0,1fr))}#classUnclosedSummaryGrid{grid-template-columns:repeat(3,minmax(0,1fr))}.class-grid{grid-template-columns:repeat(3,minmax(0,1fr))}#page-transactions.page.active,#page-monthclose>.grid-2{grid-template-columns:1fr}#page-monthclose .summary-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:640px){.header{padding:14px}.header-inner{align-items:flex-start}.header-inner>i{display:none}.logo{font-size:16px}.header .btn{font-size:0;padding:8px 10px}.header .btn i{font-size:13px}.nav-wrap{top:76px}.nav-inner{padding:8px 14px;justify-content:flex-start}.nav-btn{padding:9px 12px;font-size:13px}.main{padding:20px 12px 72px}.sec-title{font-size:20px}.stats-grid{grid-template-columns:1fr}.card{padding:16px;margin-bottom:18px}.summary-strip{grid-template-columns:1fr}.report-type-grid{overflow-x:auto}.report-type-btn{flex:0 0 auto;white-space:nowrap}.quick-amounts{grid-template-columns:repeat(4,1fr)}#classUnclosedSummaryGrid,.class-grid,#page-monthclose #bankCloseClassGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.chart-wrap{height:220px}}
+@media(max-width:900px){.nav-wrap{top:78px}.stats-grid{grid-template-columns:repeat(3,minmax(0,1fr))}#classUnclosedSummaryGrid{grid-template-columns:repeat(3,minmax(0,1fr))}.class-grid{grid-template-columns:repeat(3,minmax(0,1fr))}#page-transactions.page.active,#page-monthclose>.grid-2,.report-center-card .form-row{grid-template-columns:1fr}.wizard-steps{grid-template-columns:repeat(2,minmax(0,1fr))}#page-monthclose .summary-strip,#exportReportSummaryCards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.header{padding:14px}.header-inner{align-items:flex-start}.header-inner>i{display:none}.logo{font-size:16px}.header .btn{font-size:0;padding:8px 10px}.header .btn i{font-size:13px}.nav-wrap{top:76px}.nav-inner{padding:8px 14px;justify-content:flex-start}.nav-btn{padding:9px 12px;font-size:13px}.main{padding:20px 12px 72px}.sec-title{font-size:20px}.stats-grid{grid-template-columns:1fr}.card{padding:16px;margin-bottom:18px}.summary-strip{grid-template-columns:1fr}.report-type-grid{overflow-x:auto}.report-type-btn{flex:0 0 auto;white-space:nowrap}.quick-amounts{grid-template-columns:repeat(4,1fr)}#classUnclosedSummaryGrid,.class-grid,#page-monthclose #bankCloseClassGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.wizard-steps,#exportReportSummaryCards{grid-template-columns:1fr}.chart-wrap{height:220px}}
 </style>
 </head>
 <body>
@@ -297,9 +299,9 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg-cream-white);color:var
 <nav class="nav-wrap">
   <div class="nav-inner">
     <button class="nav-btn active" onclick="switchPage('dashboard',this)"><i class="fa-solid fa-gauge-high"></i>Dashboard</button>
-    <button class="nav-btn" onclick="switchPage('transactions',this)"><i class="fa-solid fa-coins"></i>ฝากเงิน</button>
+    <button class="nav-btn" onclick="switchPage('transactions',this)"><i class="fa-solid fa-coins"></i>ฝาก-ถอนเงิน</button>
     <button class="nav-btn" onclick="switchPage('export',this)"><i class="fa-solid fa-chart-line"></i>รายงาน</button>
-    <button class="nav-btn" onclick="switchPage('monthclose',this)"><i class="fa-solid fa-building-columns"></i>ปิดยอดสิ้นเดือน</button>
+    <button class="nav-btn" onclick="switchPage('monthclose',this)"><i class="fa-solid fa-building-columns"></i>ปิดยอดธนาคาร</button>
     <button class="nav-btn admin-only" onclick="switchPage('settings',this)" style="display:none"><i class="fa-solid fa-gear"></i>ตั้งค่า</button>
   </div>
 </nav>
@@ -419,7 +421,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg-cream-white);color:var
 
 <!-- ══════════ TRANSACTIONS ══════════ -->
 <section class="page" id="page-transactions">
-  <div class="sec-title"><i class="fa-solid fa-coins"></i>บันทึกฝาก-ถอนเงิน</div>
+  <div class="sec-title"><i class="fa-solid fa-coins"></i>ฝาก-ถอนเงิน</div>
   <div class="info-box" style="justify-content:space-between;align-items:center;flex-wrap:wrap">
     <div><i class="fa-solid fa-chalkboard-user"></i> ชั้นเรียน: <strong id="teacherContextClass">-</strong> | ครูผู้ทำรายการ: <strong id="teacherContextName">-</strong></div>
     <div class="action-row">
@@ -476,8 +478,8 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg-cream-white);color:var
       </div>
     </div>
   </div>
-  <div class="card">
-    <div class="card-title"><i class="fa-solid fa-clock-rotate-left"></i>ประวัติรายการ</div>
+    <div class="card">
+      <div class="card-title"><i class="fa-solid fa-clock-rotate-left"></i>รายการล่าสุดของห้องเรียนที่เลือก</div>
     <div class="filter-bar">
       <div class="search-wrap"><i class="fa-solid fa-search"></i><input type="text" id="txSearch" placeholder="ค้นหาชื่อ..." oninput="renderTxTable()"></div>
       <select id="txClassFilter" onchange="renderTxTable()"><option value="">ทุกชั้น</option></select>
@@ -542,7 +544,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg-cream-white);color:var
 
 <!-- ══════════ EXPORT ══════════ -->
 <section class="page" id="page-export">
-  <div class="sec-title"><i class="fa-solid fa-chart-line"></i>รายงาน</div>
+  <div class="sec-title"><i class="fa-solid fa-chart-line"></i>Report Center</div>
   <div class="summary-strip">
     <div class="summary-box"><div class="label">เงินคงเหลือที่ยังไม่ได้ปิดยอด</div><div class="value money" id="exportUnclosedCash">-</div></div>
     <div class="summary-box"><div class="label">เงินฝากในธนาคาร</div><div class="value money" id="exportBankCash">-</div></div>
@@ -550,8 +552,8 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg-cream-white);color:var
   </div>
 
   <!-- ตัวเลือกการ Export -->
-  <div class="card">
-    <div class="card-title"><i class="fa-solid fa-sliders"></i>เลือกประเภทรายงาน</div>
+  <div class="card report-center-card">
+    <div class="card-title"><i class="fa-solid fa-filter"></i>เลือกห้องเรียนและช่วงเดือน</div>
     <div class="report-type-grid" id="exportReportTypeGrid">
       <button type="button" class="report-type-btn active" data-report-type="overview" onclick="selectExportReportType('overview',this)"><i class="fa-solid fa-chart-pie"></i>รายงานภาพรวม</button>
       <button type="button" class="report-type-btn" data-report-type="daily" onclick="selectExportReportType('daily',this)"><i class="fa-solid fa-calendar-day"></i>รายงานรายวัน</button>
@@ -560,7 +562,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg-cream-white);color:var
       <button type="button" class="report-type-btn" data-report-type="student" onclick="selectExportReportType('student',this)"><i class="fa-solid fa-user-graduate"></i>รายงานรายบุคคล</button>
       <button type="button" class="report-type-btn" data-report-type="bank" onclick="selectExportReportType('bank',this)"><i class="fa-solid fa-building-columns"></i>รายงานนำฝากธนาคาร</button>
     </div>
-    <input type="hidden" id="exportType" value="overview">
+    <input type="hidden" id="exportType" value="monthly">
     <div class="form-row">
       <div class="form-group export-filter-group" id="exportClassGroup">
         <label>ชั้นเรียน</label>
@@ -607,7 +609,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg-cream-white);color:var
       <div class="class-grid" id="exportClassGrid"></div>
       <div class="info-box" id="exportClassRequiredBox"><i class="fa-solid fa-circle-info"></i><div>กรุณาเลือกชั้นเรียนก่อน</div></div>
     </div>
-    <div class="info-box" id="exportGuideBox"><i class="fa-solid fa-circle-info"></i><div>เลือกประเภทรายงานด้านบน ระบบจะแสดงตัวกรองที่จำเป็นให้โดยอัตโนมัติ</div></div>
+    <div class="info-box" id="exportGuideBox"><i class="fa-solid fa-circle-info"></i><div>เลือกชั้นเรียน เดือน และปี ระบบจะแสดงรายชื่อนักเรียนทั้งห้องพร้อมยอดฝาก ถอน และคงเหลือ</div></div>
     <div id="exportClassSummaryPanel" style="display:none"></div>
     <button class="btn btn-primary" id="exportPreviewBtn" onclick="previewExport()"><i class="fa-solid fa-eye"></i>แสดงตัวอย่าง</button>
   </div>
@@ -639,7 +641,14 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg-cream-white);color:var
 
 <!-- ══════════ MONTHLY BANK DEPOSIT CLOSE ══════════ -->
 <section class="page" id="page-monthclose">
-  <div class="sec-title"><i class="fa-solid fa-building-columns"></i>ปิดยอดเงินฝากสิ้นเดือนเพื่อนำเงินเข้าธนาคาร</div>
+  <div class="sec-title"><i class="fa-solid fa-building-columns"></i>ปิดยอดธนาคาร</div>
+  <div class="wizard-steps" aria-label="ขั้นตอนปิดยอดธนาคาร">
+    <div class="wizard-step active"><span>1</span>เลือกห้องเรียน</div>
+    <div class="wizard-step active"><span>2</span>เลือกเดือน</div>
+    <div class="wizard-step active"><span>3</span>ตรวจสอบยอด</div>
+    <div class="wizard-step active"><span>4</span>ผู้ดำเนินการ</div>
+    <div class="wizard-step active"><span>5</span>ยืนยันปิดยอด</div>
+  </div>
 
   <div class="grid-2">
     <div class="card">
@@ -711,7 +720,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg-cream-white);color:var
     </div>
   </div>
 
-  <div class="card">
+  <div class="card" id="bankHistoryCard" style="display:none">
     <div class="card-title"><i class="fa-solid fa-clock-rotate-left"></i>ประวัติการปิดยอดสิ้นเดือน</div>
     <div class="action-row" style="margin-bottom:12px">
       <button class="btn btn-primary btn-sm" onclick="loadBankCloseHistory()"><i class="fa-solid fa-rotate"></i>โหลดประวัติ</button>
@@ -1171,6 +1180,10 @@ function populateExportSelects(){
   }
   populateExportStudentSelect();
   renderExportClassGrid();
+  document.getElementById("exportType").value="monthly";
+  var legacy=document.getElementById("exportTypeLegacy");
+  if(legacy)legacy.value="monthly";
+  document.querySelectorAll(".report-type-btn").forEach(function(b){b.classList.toggle("active",b.getAttribute("data-report-type")==="monthly");});
   onExportTypeChange();
   if(!appBankDeposits.length) loadBankCloseHistory();
 }
@@ -1187,7 +1200,8 @@ function selectExportReportType(type,btn){
   maybeAutoPreviewExport();
 }
 function onExportTypeChange(){
-  var t=document.getElementById("exportType").value;
+  var t="monthly";
+  document.getElementById("exportType").value=t;
   var showClass = t==="daily" || t==="monthly" || t==="student";
   var showStudent = t==="student";
   var showClassCards = t==="class";
@@ -1276,12 +1290,13 @@ function renderExportGuide(){
   var type=document.getElementById("exportType").value;
   var cls=document.getElementById("exportClass").value;
   var student=document.getElementById("exportStudent").value;
-  var msg="เลือกประเภทรายงานด้านบน ระบบจะแสดงตัวกรองที่จำเป็นให้โดยอัตโนมัติ";
+  var msg=cls?"Report Center แสดงรายชื่อนักเรียนทั้งห้อง "+cls+" พร้อมยอดฝาก ถอน และคงเหลือ":"เลือกชั้นเรียน เดือน และปี เพื่อดูรายงานทั้งห้อง";
   if(type==="class") msg=cls?"รายงานห้อง "+cls+" แสดงรายชื่อนักเรียนทั้งห้อง ค้นหาและ Export ได้ทันที":"กรุณาเลือกชั้นเรียนจากการ์ด เพื่อดูรายงานห้องเรียนและ Export รายงาน";
   if(type==="student") msg=!cls?"ขั้นตอนที่ 1: เลือกชั้นเรียนก่อน":(!student?"ขั้นตอนที่ 2: เลือกนักเรียนในชั้น "+cls:"ขั้นตอนที่ 3: ตรวจประวัติรายการของนักเรียน แล้ว Export ได้ทันที");
   box.innerHTML='<i class="fa-solid fa-circle-info"></i><div>'+escapeHtml(msg)+'</div>';
 }
 function isExportReady(){
+  document.getElementById("exportType").value="monthly";
   var type=document.getElementById("exportType").value;
   if(type==="class"&&!document.getElementById("exportClass").value)return false;
   if(type==="student"&&(!document.getElementById("exportClass").value||!document.getElementById("exportStudent").value))return false;
@@ -1301,6 +1316,8 @@ function maybeAutoPreviewExport(){
 
 function filterStudentsForTx(prefix){
   var cls=document.getElementById(prefix+"Class").value;
+  var txClass=document.getElementById("txClassFilter");
+  if(txClass&&cls){txClass.value=cls;}
   var sel=document.getElementById(prefix+"StudentId");
   var list=appStudents.filter(function(s){return s.status==="active"&&(cls?s.className===cls:true);})
     .sort(function(a,b){return CLASSES.indexOf(a.className)-CLASSES.indexOf(b.className)||(Number(a.number)||0)-(Number(b.number)||0);});
@@ -1308,6 +1325,7 @@ function filterStudentsForTx(prefix){
     ? list.map(function(s){return '<option value="'+s.id+'">'+s.className+' เลขที่'+s.number+' '+s.name+'</option>';}).join("")
     : '<option value="">-- ไม่มีนักเรียน --</option>';
   updateBalDisp(prefix);
+  renderTxTable();
 }
 function updateBalDisp(prefix){
   var id=document.getElementById(prefix+"StudentId").value;
@@ -2050,33 +2068,29 @@ function buildExportData(){
         var items=txPeriod.filter(function(t){return t.studentId===s.id;});
         var dep=items.filter(function(t){return t.type==="DEPOSIT";}).reduce(function(a,t){return a+(Number(t.amount)||0);},0);
         var wdr=items.filter(function(t){return t.type==="WITHDRAW";}).reduce(function(a,t){return a+(Number(t.amount)||0);},0);
-        // MonthlyBankDeposits is class-level only, so per-student bank amount cannot be allocated safely yet.
-        var bankAmount=0;
         var balance=dep-wdr;
-        return [s.number||"",s.name,dep,wdr,balance,bankAmount,balance+bankAmount];
+        return [s.name,dep,wdr,balance];
       });
-      var totalMonthlyDep=monthlyRows.reduce(function(a,r){return a+r[2];},0);
-      var totalMonthlyWdr=monthlyRows.reduce(function(a,r){return a+r[3];},0);
+      var totalMonthlyDep=monthlyRows.reduce(function(a,r){return a+r[1];},0);
+      var totalMonthlyWdr=monthlyRows.reduce(function(a,r){return a+r[2];},0);
       var monthlyFs=getBankClassFinancialStatus(cls);
       return {
-        title:"รายงานการออมรายเดือน ชั้น "+cls+" "+period.label.replace(/^รายงาน/,""),
+        title:"Report Center - ชั้น "+cls,
         subtitle:schoolName+" | ชั้น "+cls+" | "+period.label,
-        heads:["เลขที่","ชื่อ-นามสกุล","ยอดฝากเดือนนี้ (บาท)","ยอดถอนเดือนนี้ (บาท)","ยอดสุทธิเดือนนี้ (บาท)","เงินฝากในธนาคาร (บาท)","ยอดรวมทั้งหมด (บาท)"],
+        heads:["ชื่อ","ยอดฝาก","ยอดถอน","ยอดคงเหลือ"],
         rows:monthlyRows,
-        summary:"ชั้น "+cls+" | นักเรียน "+classStudentsMonthly.length+" คน | ฝากรวม ฿"+fmt(totalMonthlyDep)+" | ถอนรวม ฿"+fmt(totalMonthlyWdr)+" | สุทธิ ฿"+fmt(totalMonthlyDep-totalMonthlyWdr)+" | เงินฝากธนาคารรวม ฿"+fmt(monthlyFs.bankAmount)+" | ยอดเงินรวมทั้งหมด ฿"+fmt(monthlyFs.totalAmount),
+        summary:"ยอดรวมฝาก ฿"+fmt(totalMonthlyDep)+" | ยอดรวมถอน ฿"+fmt(totalMonthlyWdr)+" | ยอดคงเหลือรวม ฿"+fmt(totalMonthlyDep-totalMonthlyWdr)+" | เงินฝากในธนาคาร ฿"+fmt(monthlyFs.bankAmount),
         summaryCards:[
           ["จำนวนนักเรียน",classStudentsMonthly.length+" คน"],
-          ["จำนวนรายการฝาก",txPeriod.filter(function(t){return t.type==="DEPOSIT";}).length+" รายการ"],
-          ["ยอดฝากรวม","฿"+fmt(totalMonthlyDep)],
-          ["ยอดถอนรวม","฿"+fmt(totalMonthlyWdr)],
-          ["ยอดสุทธิรวม","฿"+fmt(totalMonthlyDep-totalMonthlyWdr)],
-          ["เงินฝากในธนาคารรวม","฿"+fmt(monthlyFs.bankAmount)],
-          ["ยอดเงินรวมทั้งหมด","฿"+fmt(monthlyFs.totalAmount)]
+          ["ยอดรวมฝาก","฿"+fmt(totalMonthlyDep)],
+          ["ยอดรวมถอน","฿"+fmt(totalMonthlyWdr)],
+          ["ยอดคงเหลือรวม","฿"+fmt(totalMonthlyDep-totalMonthlyWdr)],
+          ["เงินฝากในธนาคาร","฿"+fmt(monthlyFs.bankAmount)]
         ],
-        moneyColumns:[2,3,4,5,6],
-        withdrawColumns:[3],
-        balanceColumns:[4,5,6],
-        filename:"รายงานการออมรายเดือน_"+cls+"_"+period.fileKey
+        moneyColumns:[1,2,3],
+        withdrawColumns:[2],
+        balanceColumns:[3],
+        filename:"Report_Center_"+cls+"_"+period.fileKey
       };
     }
     var monMap={};
@@ -2658,6 +2672,8 @@ function saveBankClose(){
       renderBankCloseSummary(r);
       setBankStatus("success","บันทึกการนำฝากเข้าธนาคารสำเร็จ เลขที่ "+r.depositId);
       showToast("บันทึกการนำฝากเข้าธนาคารสำเร็จ","success");
+      var historyCard=document.getElementById("bankHistoryCard");
+      if(historyCard)historyCard.style.display="block";
       loadBankCloseHistory();
       refreshRealBalanceCards();
     })
